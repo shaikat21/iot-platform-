@@ -1,49 +1,46 @@
-// src/controllers/telemetryController.js
 import { getUserIdFromRequest } from "../middleware/auth.js";
 import { getDeviceByIdForUser } from "../models/deviceModel.js";
-import { saveTelemetry, getTelemetryForDevice } from "../models/telemetryModel.js";
+import { insertTelemetry, getTelemetry } from "../models/telemetryModel.js";
 import { publishMessage } from "../services/mqttClient.js";
 
-//
 // POST /api/telemetry/:deviceId
-//
 export const pushTelemetry = async (req, res) => {
   try {
     const { deviceId } = req.params;
-    const userId = getUserIdFromRequest(req);
+    const ownerId = req.ownerId || getUserIdFromRequest(req);
     const payload = req.body || {};
 
-    await saveTelemetry(deviceId, payload, userId);
+    const device = await getDeviceByIdForUser(ownerId, deviceId);
+    if (!device) {
+      return res.status(404).json({ error: "Device not found or not owned by user" });
+    }
 
-    return res.json({ success: true });
+    await insertTelemetry(deviceId, payload);
+
+    publishMessage(`devices/${deviceId}/telemetry`, payload);
+
+    return res.status(201).json({ success: true });
   } catch (err) {
     console.error("[pushTelemetry] error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
 
-//
-// GET /api/telemetry/:deviceId?limit=100
-//
+// GET /api/telemetry/:deviceId?limit=50
 export const getDeviceTelemetryHttp = async (req, res) => {
   try {
-    const userId = getUserIdFromRequest(req);
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
     const { deviceId } = req.params;
-    const limit = Number(req.query.limit || 100);
+    const userId = getUserIdFromRequest(req);
+    const limit = Number(req.query.limit) || 50;
 
-    // Check device ownership
     const device = await getDeviceByIdForUser(userId, deviceId);
     if (!device) {
-      return res.status(404).json({ error: "Device not found" });
+      return res.status(404).json({ error: "Device not found or not owned by user" });
     }
 
-    const rows = await getTelemetryForDevice(device.device_id, limit, userId);
+    const telemetry = await getTelemetry(deviceId, limit);
 
-    return res.json({ telemetry: rows });
+    return res.json({ telemetry });
   } catch (err) {
     console.error("[getDeviceTelemetryHttp] error:", err);
     return res.status(500).json({ error: "Internal server error" });

@@ -7,6 +7,9 @@ import { initMqtt } from "./services/mqttClient.js";
 import routes from "./routes/index.js";
 import { initTables } from "./models/deviceModel.js";
 
+console.log("ACTUAL DATABASE_URL:", process.env.DATABASE_URL);
+
+
 const app = express();
 
 // Middlewares
@@ -51,7 +54,7 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(config.port, () => {
-  console.log(`🚀 IoT backend listening on port ${config.port}`);
+  console.log(`IoT backend listening on port ${config.port}`);
   initMqtt(); 
   initTables();
 });

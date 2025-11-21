@@ -49,15 +49,20 @@ services:
       DEVICE_JWT_SECRET: super-long-random-secret
       MQTT_HOST: emqx
       MQTT_PORT: 1883
-      #command: >
-      #  sh -c "
-      #    npm install -g nodemon &&
-      #    npm install &&
-      #    nodemon src/index.js
-      #  "
+          # FIX FOR DOCKER RELOAD:
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: 300
+    env_file:
+      - backend/.env
+    command: >
+        sh -c "
+          npm install -g nodemon &&
+          nodemon --legacy-watch src/server.js
+        "
     volumes:
       - ./backend:/app
       - /app/node_modules
+#      - /app/node_modules
     depends_on:
       - postgres
       - emqx

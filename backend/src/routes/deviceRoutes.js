@@ -1,29 +1,29 @@
+// src/routes/deviceRoutes.js
 import { Router } from "express";
 import { zitadelAuth } from "../auth/zitadelAuth.js";
-import { createDevice } from "../models/deviceModel.js"
+
+import {
+  registerDevice,
+  listMyDevices,
+  getMyDeviceById,
+  issueDeviceToken
+} from "../controllers/deviceController.js";
 
 const router = Router();
 
-// Create device
-router.post("/", zitadelAuth, async (req, res) => {
-  const { deviceId, name, serialNumber, metadata } = req.body;
+// All device routes require authentication
+router.use(zitadelAuth);
 
-  if (!deviceId || !name || !serialNumber) {
-    return res.status(400).json({ error: "Missing fields" });
-  }
+// Register new device and assign owner
+router.post("/", registerDevice);
 
-  try {
-    const device = await createDevice({ deviceId, name, serialNumber, metadata });
+// List user's devices
+router.get("/", listMyDevices);
 
-    return res.json({
-      success: true,
-      device
-    });
+// Get one device owned by user
+router.get("/:deviceId", getMyDeviceById);
 
-  } catch (err) {
-    console.error("Failed to create device:", err);
-    return res.status(500).json({ error: "Database error" });
-  }
-});
+// Issue device token for device owned by user
+router.post("/:deviceId/token", issueDeviceToken);
 
 export default router;

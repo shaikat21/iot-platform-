@@ -1,39 +1,23 @@
-// src/models/telemetryModel.js
-import { pool } from "../config/db.js";
+import { db } from "../config/db.js";
 
-/**
- * Save telemetry row for a device
- * deviceId  = ESP32-123
- * payload   = arbitrary JSON
- * userId    = (may be null if machine token)
- */
-export const saveTelemetry = async (deviceId, payload, userId = null) => {
-  const sql = `
-    INSERT INTO telemetry (device_id, payload, user_id)
-    VALUES ($1, $2, $3)
-    RETURNING id;
-  `;
-  const params = [deviceId, payload, userId];
-  const result = await pool.query(sql, params);
+export const insertTelemetry = async (deviceId, payload) => {
+  const q = `
+    INSERT INTO telemetry (device_id, payload)
+    VALUES ($1, $2)
+    RETURNING id`;
 
+  const result = await db.query(q, [deviceId, payload]);
   return result.rows[0];
 };
 
-/**
- * Get recent telemetry rows for a device
- */
-export const getTelemetryForDevice = async (deviceId, limit = 100, userId) => {
-  const sql = `
-    SELECT id, device_id, payload, user_id, created_at
+export const getTelemetry = async (deviceId, limit = 100) => {
+  const q = `
+    SELECT *
     FROM telemetry
     WHERE device_id = $1
-      AND (user_id = $2 OR $2 IS NULL)   -- allow public/machine access
-    ORDER BY created_at DESC
-    LIMIT $3;
-  `;
+    ORDER BY timestamp DESC
+    LIMIT $2`;
 
-  const params = [deviceId, userId, limit];
-  const result = await pool.query(sql, params);
-
+  const result = await db.query(q, [deviceId, limit]);
   return result.rows;
 };
