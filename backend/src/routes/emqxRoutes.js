@@ -1,61 +1,74 @@
 // src/routes/emqxRoutes.js
+
 import express from "express";
 import jwt from "jsonwebtoken";
-import { config } from "../config/env.js";
+import { getDeviceById } from "../models/deviceModel.js";   // <-- your DB lookup
 
 const router = express.Router();
 
 /**
- * EMQX AUTH — When a device connects
+ * EMQX AUTH — Validates device MQTT credentials
+ *
  * EMQX sends:
  * {
  *   "username": "<deviceId>",
  *   "password": "<deviceToken>"
  * }
  */
-router.post("/auth", (req, res) => {
-  const { username, password } = req.body;
+router.post("/auth", async (req, res) => {
+  const { username: deviceId, password: deviceToken } = req.body;
 
-  if (!username || !password) {
+  if (!deviceId || !deviceToken) {
+    console.log("[EMQX AUTH] Missing username/password");
     return res.json({ result: "deny" });
   }
 
-  try {
-    // Verify device token using your deviceJwtSecret
-    const decoded = jwt.verify(password, config.deviceJwtSecret);
+try {
+    // 1️⃣ DEVICE AUTH
+    const device = await getDeviceById(deviceId);
 
-    // MUST match device id
-    if (decoded.sub !== username) {
-      return res.json({ result: "deny" });
+    if (device && device.device_token === deviceToken) {
+      return res.json({ result: "allow" });
     }
 
-    // MUST contain owner (your system requires owner linkage)
-    if (!decoded.owner) {
-      return res.json({ result: "deny" });
+    // 2️⃣ BACKEND JWT AUTH
+    try {
+      const decoded = jwt.verify(deviceToken, process.env.MQTT_JWT_SECRET);
+
+      if (decoded?.role === "backend" && decoded?.username === deviceId) {
+        return res.json({ result: "allow" });
+      }
+    } catch (err) {
+      // ignore invalid backend JWT
     }
 
-    return res.json({ result: "allow" });
+    // 3️⃣ FAIL
+    console.log("[EMQX AUTH] Invalid token for:", deviceId);
+    return res.json({ result: "deny" });
+
   } catch (err) {
-    console.error("[EMQX AUTH] Failed:", err.message);
+    console.error("[EMQX AUTH] Error:", err);
     return res.json({ result: "deny" });
   }
 });
 
+
 /**
- * No superuser support in your architecture
+ * SUPERUSER — You do not use superusers. Always deny.
  */
-router.post("/superuser", (req, res) => {
+router.post("/superuser", (_req, res) => {
   return res.json({ result: "deny" });
 });
 
 /**
- * ACL — Only allow a device to publish/subscribe to:
- * devices/<deviceId>/#
+ * ACL — Device may only access topics in devices/<deviceId>/#
  */
 router.post("/acl", (req, res) => {
-  const { username, topic } = req.body;
+  const { username: deviceId, topic } = req.body;
 
-  if (topic && topic.startsWith(`devices/${username}/`)) {
+  if (!deviceId || !topic) return res.json({ result: "deny" });
+
+  if (topic.startsWith(`devices/${deviceId}/`)) {
     return res.json({ result: "allow" });
   }
 

@@ -1,0 +1,67 @@
+authentication = [
+  {
+    backend = http
+    body {
+      password = "${password}"
+      username = "${username}"
+    }
+    connect_timeout = "15s"
+    enable = true
+    enable_pipelining = 100
+    headers {content-type = "application/json"}
+    mechanism = password_based
+    method = post
+    pool_size = 8
+    request_timeout = "5s"
+    ssl {
+      ciphers = []
+      depth = 10
+      enable = false
+      hibernate_after = "5s"
+      log_level = notice
+      reuse_sessions = true
+      secure_renegotiate = true
+      verify = verify_peer
+      versions = [
+        "tlsv1.3",
+        "tlsv1.2"
+      ]
+    }
+    url = "http://iot-backend:8081/api/emqx/auth"
+  }
+]
+mqtt {
+  await_rel_timeout = "300s"
+  client_attrs_init = []
+  exclusive_subscription = false
+  idle_timeout = "45s"
+  ignore_loop_deliver = false
+  keepalive_check_interval = "60s"
+  keepalive_multiplier = 1
+  max_awaiting_rel = 100
+  max_clientid_len = 65535
+  max_inflight = 32
+  max_mqueue_len = 1000
+  max_packet_size = "1MB"
+  max_qos_allowed = 2
+  max_subscriptions = infinity
+  max_topic_alias = 65535
+  max_topic_levels = 128
+  message_expiry_interval = infinity
+  mqueue_default_priority = lowest
+  mqueue_priorities = disabled
+  mqueue_store_qos0 = true
+  peer_cert_as_clientid = disabled
+  peer_cert_as_username = disabled
+  response_information = ""
+  retain_available = true
+  retry_interval = "30s"
+  server_keepalive = disabled
+  session_expiry_interval = "2h"
+  shared_subscription = true
+  shared_subscription_strategy = round_robin
+  strict_mode = false
+  upgrade_qos = false
+  use_username_as_clientid = false
+  wildcard_subscription = true
+}

@@ -1,5 +1,6 @@
 // src/services/mqttClient.js
 import mqtt from "mqtt";
+import { generateBackendJwt } from "../utils/backendJwt.js";
 import { config } from "../config/env.js";
 
 let client;
@@ -7,10 +8,12 @@ let client;
 export const initMqtt = () => {
   const url = `mqtt://${config.mqtt.host}:${config.mqtt.port}`;
 
+  let jwtToken = generateBackendJwt();
+
   client = mqtt.connect(url, {
     clientId: config.mqtt.clientId,
     username: config.mqtt.username || undefined,
-    password: config.mqtt.password || undefined,
+    password: jwtToken,
     reconnectPeriod: 3000,
     keepalive: 60
   });
@@ -52,3 +55,9 @@ export const publishMessage = (topic, payload, options = { qos: 1 }) => {
     if (err) console.error("[MQTT] Publish error:", err.message);
   });
 };
+
+setInterval(() => {
+  jwtToken = generateBackendJwt();
+  client.options.password = jwtToken;  // update password without reconnect
+  console.log("[MQTT] Backend JWT refreshed");
+}, 23 * 60 * 60 * 1000);  // refresh every 23 hours
