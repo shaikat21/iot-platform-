@@ -21,7 +21,6 @@ import { OAuthService } from 'angular-oauth2-oidc';
     MatIconModule,
     MatDialogModule,
     MatProgressSpinnerModule,
-    AddDeviceDialogComponent,
   ],
   templateUrl: './dashboard.html',
 })
@@ -33,10 +32,15 @@ export class DashboardComponent implements OnInit {
   devices = signal<Device[]>([]);
 
   hasDevices = computed(() => this.devices().length > 0);
-  constructor(private oauth: OAuthService) {}
+  constructor(
+    private oauth: OAuthService
+  ) {}
 
   ngOnInit(): void {
-    this.loadDevices();
+   const token = this.oauth.getAccessToken();
+  if (!token) {
+    return; // ⛔ Don't call backend before token exists
+  }
     console.log('[Dashboard] access token:', this.oauth.getAccessToken());
     this.loadDevices();
   }

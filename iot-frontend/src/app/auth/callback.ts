@@ -1,5 +1,4 @@
-// src/app/auth/callback.ts
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { Router } from '@angular/router';
 
@@ -13,24 +12,27 @@ export class AuthCallbackComponent implements OnInit {
   private oauth = inject(OAuthService);
   private router = inject(Router);
 
-  ngOnInit() {
+  async ngOnInit() {
 
-    // SSR FIX
+        // ✅ STOP SSR FROM EXECUTING LOGIN LOGIC
     if (typeof window === 'undefined') {
-      return;
+      return; // <-- minimal fix
     }
 
-    this.oauth.tryLoginCodeFlow().then(() => {
+    // Read raw browser URL before Angular router processes it
+    const rawUrl = window.location.href;
 
-      console.log("TOKEN:", this.oauth.getAccessToken());
-      console.log("HAS TOKEN:", this.oauth.hasValidAccessToken());
+    try {
+      await this.oauth.tryLoginCodeFlow({ customHashFragment: rawUrl });
 
       if (this.oauth.hasValidAccessToken()) {
         this.router.navigateByUrl('/dashboard');
       } else {
         this.router.navigateByUrl('/');
       }
+    } catch (e) {
+      console.error("Callback login failed", e);
+      this.router.navigateByUrl('/');
     }
-  );
   }
 }

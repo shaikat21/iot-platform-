@@ -13,7 +13,7 @@ export const routes: Routes = [
       import('./auth/callback').then((m) => m.AuthCallbackComponent),
       data: {
         hydration: false,   // ⬅ Prevent SSR hydration of this route
-       // ssr: false           // ⬅ Prevent SSR execution entirely
+        ssr: false           // ⬅ Prevent SSR execution entirely
      },
   },
 
@@ -24,7 +24,7 @@ export const routes: Routes = [
       import('./auth/signed-out').then((m) => m.SignedOutComponent),
     data: {
       hydration: false,
-     // ssr: false
+      ssr: false
   },
   },
 

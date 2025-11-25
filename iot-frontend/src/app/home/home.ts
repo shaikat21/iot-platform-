@@ -9,7 +9,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatMenuModule } from '@angular/material/menu';
-import { RouterOutlet } from '@angular/router';
+
 
 @Component({
   selector: 'app-home',
@@ -23,7 +23,6 @@ import { RouterOutlet } from '@angular/router';
     MatIconModule,
     MatSelectModule,
     MatMenuModule,
-    RouterOutlet,
   ],
 
   templateUrl: './home.html',

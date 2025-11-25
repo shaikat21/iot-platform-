@@ -3,8 +3,8 @@ import { AuthConfig } from 'angular-oauth2-oidc';
 import { environment } from '../../environments/environment';
 
 export const authConfig: AuthConfig = {
-//  scope: 'openid profile email offline_access api.read api.write',
-  scope: 'openid profile email offline_access urn:zitadel:iam:org:project:id:346919177371549699:aud',
+
+  scope: 'openid profile email offline_access',
   responseType: 'code',
   oidc: true,
 

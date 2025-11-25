@@ -20,8 +20,6 @@ export interface Event {
   selector: 'app-layout',
   standalone: true,
   imports: [
-    RouterLink,
-    RouterLinkActive,
     RouterOutlet,
     MatSidenavModule,
     MatToolbarModule,
