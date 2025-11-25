@@ -1,0 +1,44 @@
+@use '@angular/material' as mat;
+
+
+// Create a Material 3 theme
+$my-theme: mat.define-theme((
+  color: (
+    primary: mat.$rose-palette,
+    tertiary: mat.$red-palette,
+  )
+));
+
+// Emit CSS variables for the theme
+html {
+  @include mat.theme($my-theme);
+}
+
+// Include all component styles (toolbar, button, sidenav, etc.)
+@include mat.all-component-themes($my-theme);
+
+
+
+/* ✅ Apply same design to search bar */
+.app-search-bar {
+  @include mat.form-field-overrides((
+    outlined-outline-color: rgba(255, 255, 255, 0.20),
+    outlined-hover-outline-color: rgba(255, 255, 255, 0.45),
+    outlined-focus-outline-color: #ffffff3e,
+    outlined-input-text-color: #ffffff,
+    outlined-label-text-color: rgba(255, 255, 255, 0.8),
+    outlined-caret-color: #ffffffd4,
+    outlined-container-shape: 12px,
+    filled-input-text-placeholder-color: rgba(255, 255, 255, 0.424),
+    filled-container-color: #ffffff17,
+    filled-active-indicator-color: rgba(255, 255, 255, 0),
+    filled-active-indicator-height: 0px,
+    filled-focus-active-indicator-color: #ffffff00,
+    filled-hover-active-indicator-color: rgba(255, 255, 255, 0),
+    filled-focus-active-indicator-height: 0px,
+    filled-label-text-color: rgba(255, 255, 255, 0.8),
+    filled-input-text-color: #ffffff,
+    filled-container-shape: 0px,
+
+  ));
+}

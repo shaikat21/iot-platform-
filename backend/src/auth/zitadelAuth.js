@@ -9,8 +9,8 @@ export const zitadelAuth = jwt({
     rateLimit: true,
     jwksRequestsPerMinute: 10,
   }),
-
-  audience: "iot-device",              
+  //audience: "iot-device",              
   issuer: "http://192.168.0.104:8085", 
   algorithms: ["RS256"],
+  requestProperty: "auth",
 });

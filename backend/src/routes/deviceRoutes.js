@@ -1,6 +1,7 @@
 // src/routes/deviceRoutes.js
 import { Router } from "express";
 import { zitadelAuth } from "../auth/zitadelAuth.js";
+import { checkAudience } from "../auth/checkAudience.js";
 
 import {
   registerDevice,
@@ -12,7 +13,7 @@ import {
 const router = Router();
 
 // All device routes require authentication
-router.use(zitadelAuth);
+router.use(zitadelAuth, checkAudience);
 
 // Register new device and assign owner
 router.post("/", registerDevice);

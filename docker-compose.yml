@@ -19,7 +19,7 @@ services:
     container_name: emqx
     restart: unless-stopped
     environment:
-      EMQX_NODE__NAME: "emqx@127.0.0.1"
+      EMQX_NODE__NAME: "emqx@emqx"
       EMQX_DASHBOARD__DEFAULT_USERNAME: admin
       EMQX_DASHBOARD__DEFAULT_PASSWORD: emqx123
     ulimits:
@@ -49,7 +49,6 @@ services:
       DATABASE_URL: postgresql://iot:iotpassword@postgres:5432/iotdb
       ZITADEL_ISSUER: https://your-zitadel-domain
       ZITADEL_AUDIENCE: iot-api
-      DEVICE_JWT_SECRET: super-long-random-secret
       MQTT_HOST: emqx
       MQTT_PORT: 1883
           # FIX FOR DOCKER RELOAD:

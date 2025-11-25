@@ -1,0 +1,75 @@
+<div style="padding: 1.5rem;">
+  <h1 style="margin-bottom: 1rem;">Dashboard</h1>
+
+  <div
+    style="
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    "
+  >
+    <!-- Add Device card -->
+    <mat-card
+      style="border: 1px dashed rgba(255,255,255,0.2); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:1.5rem; cursor:pointer;"
+      (click)="openAddDeviceDialog()"
+    >
+      <mat-icon>add_circle_outline</mat-icon>
+      <h3 style="margin:0.75rem 0 0.25rem;">Add Device</h3>
+      <p style="margin:0; font-size: 0.9rem; opacity: 0.8;">
+        Register a new device and link it to your account.
+      </p>
+    </mat-card>
+
+    <!-- Loading state -->
+    <ng-container *ngIf="loading(); else deviceList">
+      <mat-card style="display:flex; justify-content:center; align-items:center; padding:1.5rem;">
+        <mat-spinner diameter="32"></mat-spinner>
+      </mat-card>
+    </ng-container>
+
+    <ng-template #deviceList>
+      <!-- No devices -->
+      <mat-card *ngIf="!hasDevices()" style="padding:1.5rem;">
+        <h3>No devices yet</h3>
+        <p style="margin-bottom: 1rem;">Add your first device to start receiving metrics.</p>
+        <button mat-raised-button color="primary" (click)="openAddDeviceDialog()">
+          Add Device
+        </button>
+      </mat-card>
+
+      <!-- Device cards -->
+      <mat-card
+        *ngFor="let d of devices(); trackBy: trackByDeviceId"
+        style="padding:1rem;"
+      >
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <div>
+            <h3 style="margin:0;">{{ d.name || d.device_id }}</h3>
+            <small style="opacity:0.7;">ID: {{ d.device_id }}</small>
+          </div>
+          <span
+            [style.background]="d.online ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)'"
+            [style.color]="d.online ? '#4caf50' : '#f44336'"
+            style="padding:2px 8px; border-radius:999px; font-size:0.75rem;"
+          >
+            ● {{ d.online ? 'Online' : 'Offline' }}
+          </span>
+        </div>
+
+        <p style="font-size:0.85rem; margin:0.25rem 0;">
+          Serial: <strong>{{ d.serial_number }}</strong>
+        </p>
+
+        <p *ngIf="d.last_seen" style="font-size:0.75rem; opacity:0.7; margin:0.25rem 0;">
+          Last seen: {{ d.last_seen | date: 'short' }}
+        </p>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:0.75rem;">
+          <button mat-stroked-button color="primary" (click)="viewMetrics(d)">
+            View Metrics
+          </button>
+        </div>
+      </mat-card>
+    </ng-template>
+  </div>
+</div>

@@ -8,15 +8,19 @@ let client;
 export const initMqtt = () => {
   const url = `mqtt://${config.mqtt.host}:${config.mqtt.port}`;
 
-  let jwtToken = generateBackendJwt();
+  const connectWithJwt = () => {
+    const token = generateBackendJwt();
 
-  client = mqtt.connect(url, {
-    clientId: config.mqtt.clientId,
-    username: config.mqtt.username || undefined,
-    password: jwtToken,
-    reconnectPeriod: 3000,
-    keepalive: 60
-  });
+    return mqtt.connect(url, {
+      clientId: config.mqtt.clientId,
+      username: config.mqtt.username || undefined,
+      password: token,
+      reconnectPeriod: 3000,
+      keepalive: 30,
+    });
+  };
+
+  client = connectWithJwt();
 
   client.on("connect", () => {
     console.log("[MQTT] Connected to EMQX");
@@ -24,6 +28,9 @@ export const initMqtt = () => {
 
   client.on("reconnect", () => {
     console.log("[MQTT] Reconnecting...");
+
+    // Replace password BEFORE reconnecting
+    client.options.password = generateBackendJwt();
   });
 
   client.on("error", err => {
@@ -33,9 +40,6 @@ export const initMqtt = () => {
   client.on("close", () => {
     console.log("[MQTT] Connection closed");
   });
-
-  // You can subscribe to control topics if needed:
-  // client.subscribe("devices/+/status");
 
   return client;
 };
@@ -55,9 +59,3 @@ export const publishMessage = (topic, payload, options = { qos: 1 }) => {
     if (err) console.error("[MQTT] Publish error:", err.message);
   });
 };
-
-setInterval(() => {
-  jwtToken = generateBackendJwt();
-  client.options.password = jwtToken;  // update password without reconnect
-  console.log("[MQTT] Backend JWT refreshed");
-}, 23 * 60 * 60 * 1000);  // refresh every 23 hours
