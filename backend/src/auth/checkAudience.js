@@ -1,38 +1,31 @@
 // src/auth/checkAudience.js
-export function checkAudience(req, res, next) {
-  let aud = req.auth?.aud;  // audience from token
-  const expected = process.env.ZITADEL_PROJECT_ID;
 
-  console.log("Token aud:", aud);
-  console.log("Expected:", expected);
+// ---- Do not edit anything in this file ----//
 
-  if (!aud) {
-    return res.status(401).json({
-      error: "No audience claim in token",
-      expected
-    });
-  }
+import { config } from "../config/env.js";
 
-  // If aud is a string → convert to array
-  if (typeof aud === "string") {
-    aud = [aud];
-  }
+export const checkAudience = (req, res, next) => {
+  const projectId = config.zitadel.projectId;
+  const serviceClientId = config.zitadel.serviceClientId
 
-  if (!Array.isArray(aud)) {
-    return res.status(401).json({
-      error: "Audience not an array",
-      received: aud
-    });
-  }
+  // No token present → guest → allow
+  if (!req.auth) return next();
+  if (!req.auth.aud) return next(); // Anonymous token? Allow.
 
-  if (!aud.includes(expected)) {
-    return res.status(401).json({
-      error: "Invalid audience",
-      expected,
-      received: aud
+  // Token present → validate audience
+  const aud = req.auth.aud;
+
+  const valid = Array.isArray(aud)
+    ? aud.includes(projectId) || aud.includes(serviceClientId)
+    : aud === projectId || aud === serviceClientId;
+
+  if (!valid) {
+    return res.status(403).json({
+      error: `Invalid token audience`,
+      expected: projectId,
+      got: aud,
     });
   }
 
   next();
-}
-
+};

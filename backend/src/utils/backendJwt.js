@@ -1,12 +1,13 @@
 import jwt from "jsonwebtoken";
+import { config } from "../config/env.js";
 
 export const generateBackendJwt = () => {
   return jwt.sign(
     {
-      username: process.env.MQTT_USERNAME,
+      username: config.mqtt.clientId,
       role: "backend"
     },
     process.env.MQTT_JWT_SECRET,
-    { expiresIn: "24h" }
+    { expiresIn: "15m" }
   );
 };

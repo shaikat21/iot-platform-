@@ -5,8 +5,8 @@ export const environment = {
   oauth: {
     clientId: '347965190182109186',
     issuer: 'http://192.168.0.104:8085',
-    redirectUri: 'http://192.168.0.104:4200/auth/callback',
-    postLogoutRedirectUri: 'http://192.168.0.104:4200/signedout',
+    redirectUri: 'http://192.168.0.104:4204/auth/callback',
+    postLogoutRedirectUri: 'http://192.168.0.104:4204/signedout',
     requireHttps: false,
     strictDiscoveryDocumentValidation: false,
   },

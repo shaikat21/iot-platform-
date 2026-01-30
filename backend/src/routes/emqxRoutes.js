@@ -24,26 +24,38 @@ router.post("/auth", async (req, res) => {
     return res.json({ result: "deny" });
   }
 
-try {
-    // 1️⃣ DEVICE AUTH
-    const device = await getDeviceById(deviceId);
-
-    if (device && device.device_token === deviceToken) {
-      return res.json({ result: "allow" });
-    }
-
-    // 2️⃣ BACKEND JWT AUTH
+    // 1 BACKEND JWT AUTH
     try {
       const decoded = jwt.verify(deviceToken, process.env.MQTT_JWT_SECRET);
 
       if (decoded?.role === "backend" && decoded?.username === deviceId) {
         return res.json({ result: "allow" });
       }
-    } catch (err) {
-      // ignore invalid backend JWT
+      // JWT valid but not backend identity
+    console.warn("[EMQX AUTH] Valid JWT but not backend:", {
+    deviceId,
+    role: decoded?.role,
+    });
+
+  } catch (err) {
+  // Only log *non-noise* cases
+  if (err.name !== "TokenExpiredError") {
+    console.warn("[EMQX AUTH] Invalid backend JWT:", {
+      deviceId,
+      reason: err.name,
+    });
+  }
+}
+
+    try {
+    // 2 DEVICE AUTH. 
+    const device = await getDeviceById(deviceId);
+
+    if (device && device.device_token === deviceToken) {
+      return res.json({ result: "allow" });
     }
 
-    // 3️⃣ FAIL
+    // 3 FAIL
     console.log("[EMQX AUTH] Invalid token for:", deviceId);
     return res.json({ result: "deny" });
 
@@ -61,20 +73,6 @@ router.post("/superuser", (_req, res) => {
   return res.json({ result: "deny" });
 });
 
-/**
- * ACL — Device may only access topics in devices/<deviceId>/#
- */
-router.post("/acl", (req, res) => {
-  const { username: deviceId, topic } = req.body;
-
-  if (!deviceId || !topic) return res.json({ result: "deny" });
-
-  if (topic.startsWith(`devices/${deviceId}/`)) {
-    return res.json({ result: "allow" });
-  }
-
-  return res.json({ result: "deny" });
-});
 
 router.post("/webhook", async (req, res) => {
   const data = req.body;
@@ -84,7 +82,7 @@ router.post("/webhook", async (req, res) => {
   try {
     // EMQX sends "event": "client.connected" or "client.disconnected"
     const evt = data.event;
-    const deviceId = data.username;
+    const deviceId = data.clientid;
 
     if (evt === "client.connected") {
       console.log("Device connected:", deviceId);

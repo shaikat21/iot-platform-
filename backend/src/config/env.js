@@ -36,5 +36,17 @@ export const config = {
     clientId: getEnv("MQTT_CLIENT_ID", "backend-api")
   },
 
+  zitadel: {
+    issuer: getEnv("ZITADEL_ISSUER"),
+    projectId: getEnv("ZITADEL_PROJECT_ID"),
+    jwksUri: `${getEnv("ZITADEL_ISSUER")}/oauth/v2/keys`,
+    userInfoUri: `${getEnv("ZITADEL_ISSUER")}/oidc/v1/userinfo`,
+    tokenUri: `${getEnv("ZITADEL_ISSUER")}/oauth/v2/token`,
+    serviceClientId: `${getEnv("ZITADEL_SERVICE_CLIENT_ID")}`,
+    serviceClientSecret: `${getEnv("ZITADEL_SERVICE_CLIENT_SECRET")}`,
+    serviceClientId2: `${getEnv("ZITADEL_SERVICE_CLIENT_ID2")}`,
+    serviceClientSecret2: `${getEnv("ZITADEL_SERVICE_CLIENT_SECRET2")}`,
+  },
+
   corsOrigins: getEnv("CORS_ORIGINS", "").split(",").filter(Boolean)
 };

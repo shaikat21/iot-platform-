@@ -21,7 +21,7 @@ export function authInitializer() {
   oauth.configure(authConfig);
   oauth.strictDiscoveryDocumentValidation = false;
 
-  // ⭐ FIX: convert Promise<boolean> to Promise<void>
+  //  FIX: convert Promise<boolean> to Promise<void>
   return oauth
     .loadDiscoveryDocumentAndTryLogin({
       preventClearHashAfterLogin: true,

@@ -10,6 +10,9 @@ import {
   issueDeviceToken
 } from "../controllers/deviceController.js";
 
+ // requireAuth,
+ // authorize(["admin"]),
+
 const router = Router();
 
 // All device routes require authentication

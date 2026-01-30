@@ -73,6 +73,20 @@ services:
     ports:
       - "8086:8081"
 
+#Live FE
+  iot-frontend:
+    image: node:20.19-bookworm
+    working_dir: /usr/src/app
+    volumes:
+      - /home/shaikat21/iot-platform/iot-frontend:/usr/src/app
+      - container-cache:/usr/src/app/.angular/cache-host
+      - /usr/src/app/node_modules
+    command: sh -c "npm ci --no-audit --no-fund && npx ng serve --host 0.0.0.0 --port 4200"
+    
+    ports:
+      - "4204:4200"
+    restart: unless-stopped
+
 networks:
   iot:
 
@@ -80,3 +94,4 @@ volumes:
   iot_pg_data:
   emqx_data:
   emqx_log:
+  container-cache:
