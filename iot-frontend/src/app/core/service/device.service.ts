@@ -2,8 +2,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { OAuthService } from 'angular-oauth2-oidc';
-import { environment } from '../../environments/environment';
-import { Device, TelemetryRow } from '../models/device.model';
+import { environment } from '../../../environments/environment';
+import { Device, TelemetryRow } from '../../models/device.model';
 import { Observable, map } from 'rxjs';
 
 interface DeviceListResponse {

@@ -1,7 +1,9 @@
 import { Routes } from '@angular/router';
 import { LayoutComponent } from './layout/layout';
 import { HomeComponent } from './home/home';
-import { AuthGuard } from './guards/auth.guard';
+import { RoleGuard } from './core/guards/role.guard';
+import { UserRoles } from './shared/enums/user-roles.enum';
+
 
 export const routes: Routes = [
 
@@ -10,22 +12,14 @@ export const routes: Routes = [
   {
     path: 'auth/callback',
     loadComponent: () =>
-      import('./auth/callback').then((m) => m.AuthCallbackComponent),
-      data: {
-        hydration: false,   // ⬅ Prevent SSR hydration of this route
-        ssr: false           // ⬅ Prevent SSR execution entirely
-     },
+      import('./core/auth/signin-callback').then((m) => m.AuthCallbackComponent),
   },
 
   // Signed out route (public)
   {
     path: 'signedout',
     loadComponent: () =>
-      import('./auth/signed-out').then((m) => m.SignedOutComponent),
-    data: {
-      hydration: false,
-      ssr: false
-  },
+      import('./core/auth/signed-out').then((m) => m.SignedOutComponent),
   },
 
   {
@@ -38,11 +32,14 @@ export const routes: Routes = [
       // PROTECTED ROUTES
       {
         path: 'dashboard',
-        canActivate: [AuthGuard],
+        canActivate: [RoleGuard],
+        data: {
+          roles: [UserRoles.ADMIN, UserRoles.DEVELOPER]
+        },
         loadComponent: () =>
           import('./dashboard/dashboard').then((m) => m.DashboardComponent),
       },
     ],
   },
-
+      { path: '**', redirectTo: '' },
 ]

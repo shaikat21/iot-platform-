@@ -1,7 +1,7 @@
 // src/app/dashboard/dashboard.ts
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DeviceService } from '../service/device.service';
+import { DeviceService } from '../core/service/device.service';
 import { Device } from '../models/device.model';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';

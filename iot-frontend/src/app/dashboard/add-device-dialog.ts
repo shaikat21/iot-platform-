@@ -5,7 +5,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { DeviceService } from '../service/device.service';
+import { DeviceService } from '../core/service/device.service';
 
 @Component({
   selector: 'app-add-device-dialog',
