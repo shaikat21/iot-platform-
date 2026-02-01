@@ -1,5 +1,16 @@
-<mat-toolbar color="primary">
+<mat-toolbar color="primary" class="app-toolbar">
   <span>IoT Platform</span>
+
+  <span class="spacer"></span>
+
+  @if (!loggedIn) {
+    <button mat-button (click)="login()">Login</button>
+  } @else {
+    <span class="username">{{ userName }}</span>
+    <button mat-button (click)="logout()">Logout</button>
+  }
 </mat-toolbar>
 
 <router-outlet></router-outlet>
+
+

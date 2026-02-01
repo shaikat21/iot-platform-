@@ -7,7 +7,7 @@ import { initMqtt } from "./services/mqttClient.js";
 import routes from "./routes/index.js";
 import { initTables } from "./models/deviceModel.js";
 
-console.log("ACTUAL DATABASE_URL:", process.env.DATABASE_URL);
+console.log("ACTUAL DATABASE_URL:", config.db.url);
 
 
 const app = express();
@@ -18,19 +18,30 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
 if (config.corsOrigins.length > 0) {
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (!origin || config.corsOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-        return callback(new Error("Not allowed by CORS"));
-      },
-      credentials: true
-    })
-  );
+  const corsMiddleware = cors({
+    origin: (origin, callback) => {
+      // allow server-to-server / curl / healthchecks
+      if (!origin) return callback(null, true);
+
+      // allow configured origins
+      if (config.corsOrigins.includes(origin)) return callback(null, true);
+
+      // IMPORTANT: deny without throwing (prevents 500)
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-iot-fe-key"],
+    maxAge: 86400,
+  });
+
+  app.use(corsMiddleware);
+
+  // IMPORTANT: respond to preflight before routes
+  app.options("*", corsMiddleware);
 } else {
   app.use(cors());
+  app.options("*", cors());
 }
 
 // API Routes

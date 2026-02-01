@@ -16,13 +16,5 @@ export const authConfig: AuthConfig = {
   useSilentRefresh: true,
   sessionChecksEnabled: false,  
   showDebugInformation: !environment.production,
-  
-  
-  
-  
-
-  
-  
-  
 };
 

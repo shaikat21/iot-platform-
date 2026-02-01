@@ -27,10 +27,8 @@ export class AuthService {
   user = toSignal(this.user$);
 
   /** Emits whether access token is valid */
-  private isAuthenticated$: Observable<boolean> = this.user$.pipe(
-    map(() => this.oauth.hasValidAccessToken())
-  );
-  isAuthenticated = toSignal(this.isAuthenticated$);
+    private isAuthenticated$!: Observable<boolean>;
+    isAuthenticated!: ReturnType<typeof toSignal>;
 
   /** Any auth errors */
   public authError$ = new BehaviorSubject<unknown>(null);
@@ -43,6 +41,10 @@ export class AuthService {
     private pushService: PushService,
     private http: HttpClient,
   ) {
+    this.isAuthenticated$ = this.user$.pipe(
+      map(() => this.oauth.hasValidAccessToken())
+    );
+    this.isAuthenticated = toSignal(this.isAuthenticated$, { initialValue: false });
     this.initialize();
   }
 

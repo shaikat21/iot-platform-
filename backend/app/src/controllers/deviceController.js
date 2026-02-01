@@ -7,7 +7,7 @@ import {
   getDevicesForUser,
   getDeviceByIdForUser
 } from "../models/deviceModel.js";
-import { getUserIdFromRequest } from "../middleware/auth.js";
+import { getUserIdFromRequest } from "../auth/userRoleID.js";
 
 // Register new device
 export const registerDevice = async (req, res) => {

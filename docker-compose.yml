@@ -41,7 +41,7 @@ services:
       - "18083:18083"
 
   backend:
-    build: ./backend
+    build: ./backend/app
    # image: node:20
     container_name: iot-backend
     restart: unless-stopped
@@ -55,16 +55,15 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: 300
     env_file:
-      - backend/.env
+      - ./.env
     command: >
         sh -c "
           npm install -g nodemon &&
           nodemon --legacy-watch src/server.js
         "
     volumes:
-      - ./backend:/app
+      - ./backend/app:/app
       - /app/node_modules
-#      - /app/node_modules
     depends_on:
       - postgres
       - emqx

@@ -25,8 +25,10 @@ export const config = {
     algorithms: ["RS256"],
 
   },
-
-  deviceJwtSecret: getEnv("DEVICE_JWT_SECRET"),
+  backend: {
+    anontokenSecret: getEnv("ANON_TOKEN_SECRET"),
+    webhookSecret: getEnv("WEBHOOK_SECRET"),
+  },
 
   mqtt: {
     host: getEnv("MQTT_HOST", "emqx"),

@@ -10,16 +10,16 @@ export const routes: Routes = [
 
   // Auth callback route (public)
   {
-    path: 'auth/callback',
+    path: 'signin/callback',
     loadComponent: () =>
-      import('./core/auth/signin-callback').then((m) => m.AuthCallbackComponent),
+      import('./core/auth/signin-callback').then((m) => m.SigninCallback),
   },
 
   // Signed out route (public)
   {
-    path: 'signedout',
+    path: 'signedout/callback',
     loadComponent: () =>
-      import('./core/auth/signed-out').then((m) => m.SignedOutComponent),
+      import('./core/auth/signout-callback').then((m) => m.SignoutCallback),
   },
 
   {

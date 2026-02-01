@@ -8,50 +8,39 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import {MatMenuModule} from '@angular/material/menu';
 import { DeviceService } from '../platformDetection/platform-detect.service';
-import { OAuthService } from 'angular-oauth2-oidc';
+import { AuthService } from '../core/auth/auth.service';
 
-
-export interface Event {
-  id: number | string;
-  name: string;
-}
 
 @Component({
   selector: 'app-layout',
   standalone: true,
   imports: [
     RouterOutlet,
-    MatSidenavModule,
     MatToolbarModule,
-    MatButtonModule,
-    MatIconModule,
-    MatListModule,
-    MatMenuModule
+    MatButtonModule
   ],
-
   templateUrl: './layout.html',
   styleUrl: './layout.css'
 })
 export class LayoutComponent {
-  isBrowser = false;
 
-  device = inject(DeviceService);
-  private platformId = inject(PLATFORM_ID);
-
-
-  constructor(private oauth: OAuthService) {
-    this.isBrowser = isPlatformBrowser(this.platformId);
-  }
+  constructor(public auth: AuthService) {}
 
   login() {
-    this.oauth.initCodeFlow();
+    this.auth.signinRedirect();
   }
 
   logout() {
-    this.oauth.logOut();
+    this.auth.signoutRedirect();
   }
 
   get loggedIn() {
-    return this.oauth.hasValidAccessToken();
+    return this.auth.isAuthenticated();
   }
+
+  get userName(): string {
+    const user = this.auth.user();
+    return user?.name ?? '';
+}
+
 }

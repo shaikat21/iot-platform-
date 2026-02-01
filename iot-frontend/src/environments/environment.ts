@@ -12,10 +12,11 @@ export const environment = {
     strictDiscovery: false,
     strictDiscoveryDocumentValidation: false,
   },
-
+  
   api: {
     baseUrl: 'http://192.168.0.104:8086/api', // ⬅ backend (you used this in curl)
   },
-
+ 
+  anon_token_secret: '97284cefa89fe1f4f7b9c67ad140f257963ced4d02b730bbf9b668874fb91273',
   
 };
