@@ -22,6 +22,16 @@ import { authConfig } from './auth.config';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+
+  private readyResolve!: () => void;
+  private readyPromise = new Promise<void>((resolve) => {
+    this.readyResolve = resolve;
+  });
+  
+  whenReady(): Promise<void> {
+    return this.readyPromise;
+  }
+
   /** Emits identity claims (or null) */
   private user$ = new BehaviorSubject<any | null>(null);
   user = toSignal(this.user$);
@@ -62,6 +72,8 @@ export class AuthService {
   } catch (e) {
     console.error('Auth init error:', e);
     this.authError$.next(e);
+  } finally {
+    this.readyResolve(); 
   }
 }
 
@@ -180,6 +192,7 @@ export class AuthService {
    */
   async signinCallback(): Promise<void> {
     try {
+      await this.oauth.loadDiscoveryDocumentAndTryLogin();
       await this.oauth.tryLoginCodeFlow();
       await this.syncUserFromTokens();
 
@@ -235,10 +248,6 @@ export class AuthService {
 
   private cleanupAfterSignout(): void {
   this.user$.next(null);
-
-  // Clear OAuth tokens without redirect
-  this.oauth.logOut(false);
-
   localStorage.removeItem('authGuardInterceptedPathname');
   localStorage.removeItem('auth_token');
 }
@@ -246,12 +255,14 @@ export class AuthService {
   async getSession(): Promise<AuthSession | null> {
     try {
       return await firstValueFrom(
-        this.http.get<AuthSession>(`${environment.api.baseUrl}/auth/session`)
+        this.http.get<AuthSession>(`${environment.api.baseUrl}/session`)
       );
     } catch (err) {
       return null;
     }
   }
+
+  
 
 }
 

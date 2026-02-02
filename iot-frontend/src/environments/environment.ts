@@ -6,8 +6,9 @@ export const environment = {
     clientId: '347965190182109186',
     issuer: 'http://192.168.0.104:8085',
     scope: 'openid profile email offline_access',
-    redirectUri: 'http://localhost:4204/auth/callback',
-    postLogoutRedirectUri: 'http://localhost:4204/signedout',
+    redirectUri: window.location.origin + '/signin/callback',
+    postLogoutRedirectUri: window.location.origin + '/signedout/callback',
+
     requireHttps: false,
     strictDiscovery: false,
     strictDiscoveryDocumentValidation: false,

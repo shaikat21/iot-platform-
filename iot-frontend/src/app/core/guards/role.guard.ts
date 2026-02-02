@@ -8,6 +8,7 @@ export class RoleGuard implements CanActivate {
   constructor(private auth: AuthService, private router: Router) {}
 
   async canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Promise<boolean> {
+    await this.auth.whenReady();
     if (!this.auth.isAuthenticated()) { // signal call is OK
       this.router.navigate(['/']);
       return false;
@@ -17,7 +18,7 @@ export class RoleGuard implements CanActivate {
     if (allowedRoles.length === 0) return true;
 
     const session = await this.auth.getSession();
-    const roles = session?.user?.roles || [];
+    const roles = session?.roles || [];
 
     const hasAccess = roles.some(r => allowedRoles.includes(r as UserRoles));
     if (!hasAccess) this.router.navigate(['/']);

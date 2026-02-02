@@ -15,8 +15,8 @@ import {
 const router = Router();
 
 // All device routes require authentication
- requireAuth,
- authorize(["admin", "user", "devloper"]),
+router.use(requireAuth);
+router.use(authorize(["admin", "user", "developer"]));
 
 // Register new device and assign owner
 router.post("/", registerDevice);

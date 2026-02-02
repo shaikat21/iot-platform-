@@ -6,6 +6,10 @@ import { config } from "./config/env.js";
 import { initMqtt } from "./services/mqttClient.js";
 import routes from "./routes/index.js";
 import { initTables } from "./models/deviceModel.js";
+import { zitadelAuth } from "./auth/zitadelAuth.js";
+import { checkAudience } from "./auth/checkAudience.js";
+import { userID } from "./auth/userRoleID.js";
+import { requireAnonToken } from "./auth/requireAnonToken.js";
 
 console.log("ACTUAL DATABASE_URL:", config.db.url);
 
@@ -43,6 +47,26 @@ if (config.corsOrigins.length > 0) {
   app.use(cors());
   app.options("*", cors());
 }
+
+/* =====================================================
+   AUTH CHAIN — required for user/admin endpoints
+   BUT allows anonymous because zitadelAuth is optional
+   ===================================================== */
+app.use(zitadelAuth);
+app.use(checkAudience);
+app.use(userID);
+
+/* =====================================================
+   ROUTES (public + user + admin)
+   Public routes are handled by authorize(["anon"])
+   Protected routes use authorize(["user"])
+   Admin routes use authorize(["admin"])
+   ===================================================== */
+
+// ENFORCE anon token everywhere except /api/auth/anontoken
+// please uncomment app.use(requireAnonToken); once FE configured to use anon_token for unauthenticated public endpoint
+
+//app.use(requireAnonToken);
 
 // API Routes
 app.use("/api", routes);

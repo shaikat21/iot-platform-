@@ -1,0 +1,13 @@
+api/session → "Am I logged in? What roles?"
+
+1. check with valid token
+  curl -H "Authorization: Bearer TOKEN" \
+  https://api.myimprint.ca/api/auth/session
+
+On success return eg: {"authenticated":true,"userId":"349847527111000068","roles":["admin"],"isAdmin":true,"isUser":false}% 
+
+2. check with Wrong token or no token
+  curl -H "Authorization: Bearer WRONGTOKEN" \
+  https://api.myimprint.ca/api/auth/session
+
+  Expected output: {"authenticated":false,"roles":["anon"]}% 

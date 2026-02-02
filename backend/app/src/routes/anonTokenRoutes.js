@@ -16,7 +16,7 @@ const router = Router();
  * FE calls this WITHOUT token
  * BE fetches anon token using service user
  */
-router.post("/auth/anontoken", 
+router.post("/", 
     rateLimit,
     VerifyAnonTokenKey,
     async (_req, res) => {

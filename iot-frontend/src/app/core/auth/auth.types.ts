@@ -1,8 +1,10 @@
+// iot-frontend/src/app/core/auth/auth.types.ts
+import { UserRoles } from '../../shared/enums/user-roles.enum';
+
 export interface AuthSession {
-  ok?: boolean;
-  user?: {
-    id?: string;
-    userId?: string;
-    roles?: string[];
-  };
+  authenticated: boolean;
+  userId?: string;
+  roles: UserRoles[];
+  isAdmin?: boolean;
+  isUser?: boolean;
 }

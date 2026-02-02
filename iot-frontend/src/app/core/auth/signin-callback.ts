@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 
 @Component({
   selector: 'signin-callback',
-  standalone: false,
+  standalone: true,
   template: `<p>Signing in...</p>`
 })
 

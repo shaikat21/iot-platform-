@@ -1,3 +1,4 @@
+// src/routes/meRoutes.js
 import { Router } from "express";
 import { config } from "../config/env.js";
 import { zitadelAuth } from "../auth/zitadelAuth.js";
@@ -9,7 +10,7 @@ import fetch from "node-fetch";
 
 const router = Router();
 
-router.get("/auth/me",
+router.get("/",
   zitadelAuth,
   checkAudience,
   userID,

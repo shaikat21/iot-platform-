@@ -19,12 +19,6 @@ export const config = {
     url: getEnv("DATABASE_URL")
   },
 
-  zitadel: {
-    audience: process.env.ZITADEL_AUDIENCE,
-    issuer: `${process.env.ZITADEL_ISSUER}/oauth/v2`,
-    algorithms: ["RS256"],
-
-  },
   backend: {
     anontokenSecret: getEnv("ANON_TOKEN_SECRET"),
     webhookSecret: getEnv("WEBHOOK_SECRET"),
@@ -44,8 +38,8 @@ export const config = {
     jwksUri: `${getEnv("ZITADEL_ISSUER")}/oauth/v2/keys`,
     userInfoUri: `${getEnv("ZITADEL_ISSUER")}/oidc/v1/userinfo`,
     tokenUri: `${getEnv("ZITADEL_ISSUER")}/oauth/v2/token`,
-    serviceClientId: `${getEnv("ZITADEL_SERVICE_CLIENT_ID")}`,
-    serviceClientSecret: `${getEnv("ZITADEL_SERVICE_CLIENT_SECRET")}`,
+    serviceClientId: `${getEnv("ZITADEL_CLIENT_ID")}`,
+    serviceClientSecret: `${getEnv("ZITADEL_CLIENT_SECRET")}`,
     serviceClientId2: `${getEnv("ZITADEL_SERVICE_CLIENT_ID2")}`,
     serviceClientSecret2: `${getEnv("ZITADEL_SERVICE_CLIENT_SECRET2")}`,
   },

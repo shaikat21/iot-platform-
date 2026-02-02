@@ -46,6 +46,7 @@ export const zitadelAuth = (req, res, next) => {
         if (err.name === "TokenExpiredError") {
           return res.status(401).json({ error: "Token expired" });
         }
+        console.error("JWT verify error:", err); // to check error details
         return res.status(401).json({ error: "Invalid auth token" });
       }
 
