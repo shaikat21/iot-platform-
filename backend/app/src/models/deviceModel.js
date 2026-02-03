@@ -37,20 +37,39 @@ export const initTables = async () => {
     ON devices(last_seen);
   `);
 
-  // ---------- TELEMETRY ----------
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS telemetry (
-      id SERIAL PRIMARY KEY,
-      device_id TEXT NOT NULL,
-      payload JSONB NOT NULL,
-      timestamp TIMESTAMP DEFAULT NOW()
-    );
-  `);
 
-  await db.query(`
-    CREATE INDEX IF NOT EXISTS idx_telemetry_device_id 
-    ON telemetry(device_id);
-  `);
+// ---------- TELEMETRY ----------
+await db.query(`
+  CREATE TABLE IF NOT EXISTS telemetry (
+    id SERIAL PRIMARY KEY,
+
+    device_id TEXT NOT NULL,
+    metric TEXT NOT NULL,        -- temp, humidity, relay, etc
+    category TEXT NULL,          -- temperature, humidity, binary
+    unit TEXT NULL,              -- °C, %, cm, etc
+    qos SMALLINT NULL,
+    topic TEXT NULL,
+
+    value_num DOUBLE PRECISION NULL,
+    value_bool BOOLEAN NULL,
+
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT telemetry_value_check
+      CHECK (value_num IS NOT NULL OR value_bool IS NOT NULL)
+  );
+`);
+
+await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_telemetry_device_time
+  ON telemetry (device_id, timestamp DESC);
+`);
+
+await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_telemetry_device_metric_time
+  ON telemetry (device_id, metric, timestamp DESC);
+`);
+
 
   // ---------- DEVICE EVENTS ----------
   await db.query(`

@@ -2,6 +2,8 @@
 import mqtt from "mqtt";
 import { generateBackendJwt } from "../utils/backendJwt.js";
 import { config } from "../config/env.js";
+import { insertTelemetry } from "../models/telemetryModel.js";
+import { METRIC_DEFINITIONS } from "../middleware/metricRegistry.js";
 
 let client;
 
@@ -56,26 +58,61 @@ export const initMqtt = () => {
     console.log("[MQTT] Connection closed");
   });
 
-  client.on("message", (topic, payload, packet) => {
-  const raw = payload.toString();
+  client.on("message", async (topic, payload, packet) => {
+  let value;
 
-  let data;
   try {
-    data = JSON.parse(raw);
-  } catch {
-    data = raw;
-  }
+    const raw = payload.toString();
+    try { value = JSON.parse(raw); } catch { value = raw; }
 
-  console.log("────────────────────────────────");
-  console.log("[MQTT] Topic :", topic);
-  console.log("[MQTT] QoS   :", packet.qos);
-  console.log("[MQTT] Data  :", data);
+    // tele/<deviceId>/<metric>
+    const match = topic.match(/^tele\/([^/]+)\/([^/]+)$/);
+    if (!match) return;
+
+    const deviceId = match[1];
+    const metric = match[2];
+
+    const def = METRIC_DEFINITIONS[metric];
+    if (!def) {
+      console.warn("[MQTT] Unknown metric:", metric);
+      return;
+    }
+
+    const normalized = def.normalize(value);
+
+    const valueNum = def.type === "number" ? Number(normalized) : null;
+    const valueBool = def.type === "boolean" ? Boolean(normalized) : null;
+
+    await insertTelemetry({
+      deviceId,
+      metric,
+      category: def.category,
+      unit: def.unit,
+      qos: packet.qos,
+      topic,
+      valueNum,
+      valueBool,
+    });
+
+    console.log(
+      "[MQTT] saved:",
+      deviceId,
+      metric,
+      def.type === "number" ? valueNum : valueBool,
+      def.unit ?? ""
+    );
+  } catch (err) {
+    console.error("[MQTT] handler error:", err);
+  }
 });
+
+
+
 
  //error log 
  client.on("disconnect", pkt => console.log("[MQTT] disconnect:", pkt));
-client.on("close", () => console.log("[MQTT] close"));
-client.on("error", err => console.log("[MQTT] error:", err.message));
+ client.on("close", () => console.log("[MQTT] close"));
+ client.on("error", err => console.log("[MQTT] error:", err.message));
 
 
   return client;

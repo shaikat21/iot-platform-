@@ -7,7 +7,7 @@ import {
   registerDevice,
   listMyDevices,
   getMyDeviceById,
-  issueDeviceToken
+  //issueDeviceToken
 } from "../controllers/deviceController.js";
 
 
@@ -28,6 +28,6 @@ router.get("/", listMyDevices);
 router.get("/:deviceId", getMyDeviceById);
 
 // Issue device token for device owned by user
-router.post("/:deviceId/token", issueDeviceToken);
+//router.post("/:deviceId/token", issueDeviceToken);
 
 export default router;

@@ -1,7 +1,7 @@
 // src/routes/telemetryRoutes.js
 import { Router } from "express";
-import { deviceAuth } from "../middleware/deviceAuth.js";
-import { zitadelAuth } from "../auth/zitadelAuth.js";
+import { authorize } from "../auth/authorize.js";
+import { requireAuth } from "../auth/requireAuth.js";
 import {
   pushTelemetry,
   getDeviceTelemetryHttp
@@ -9,12 +9,14 @@ import {
 
 const router = Router();
 
-
+// All device routes require authentication
+router.use(requireAuth);
+router.use(authorize(["admin", "user", "developer"]));
 
 // POST /api/telemetry/:deviceId
-router.post("/:deviceId", deviceAuth, pushTelemetry);
+router.post("/:deviceId", pushTelemetry);
 
 // GET /api/telemetry/:deviceId?limit=100
-router.get("/:deviceId", zitadelAuth, getDeviceTelemetryHttp);
+router.get("/:deviceId", getDeviceTelemetryHttp);
 
 export default router;

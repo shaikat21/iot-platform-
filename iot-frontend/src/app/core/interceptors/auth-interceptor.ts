@@ -1,3 +1,5 @@
+//app/core/interceptors/auth.interceptor.ts
+
 import { Injectable } from '@angular/core';
 import {
   HttpEvent,
@@ -8,46 +10,43 @@ import {
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { OAuthService } from 'angular-oauth2-oidc';
-import { environment } from '../../../environments/environment';
+import { Router } from '@angular/router';
+import { UserService } from '../service/user.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-  constructor(private oauth: OAuthService) {}
+  constructor(private router: Router, private userService: UserService) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    // only attach token to YOUR backend API
-    // environment.api.baseUrl = 'http://192.168.0.104:8086/api'
-    if (!req.url.startsWith(environment.api.baseUrl)) {
-      return next.handle(req);
+    let authReq = req;
+
+    const token = localStorage.getItem('auth_token');
+
+    // ADDED THIS LINE to stop oidc to call directly IAM for user info, Farukh please check
+    // if (!req.url.startsWith('https://api.myimprint.ca')) {
+    //  return next.handle(req);
+    //}
+
+    if (token) {
+      authReq = req.clone({
+        setHeaders: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
     }
-
-    const token = this.oauth.getAccessToken(); // ✅ source of truth
-
-    const authReq = token
-      ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-      : req;
 
     return next.handle(authReq).pipe(
       catchError((error: HttpErrorResponse) => {
         if (error.status === 401) {
-          console.warn('401 Unauthorized — clearing session');
-
-          // Clear local app state you manage
+          console.warn('Unauthorized! Redirecting to login...');
+          localStorage.removeItem('auth_token');
           localStorage.removeItem('currentUser');
-          localStorage.removeItem('authGuardInterceptedPathname');
-
-          // Clear oauth tokens (no redirect)
-          this.oauth.logOut(false);
-
-          // Same behavior as your old code
           window.location.reload();
         } else if (error.status === 403) {
-          console.error('403 Forbidden');
+          console.error('Access denied!');
         } else if (error.status === 500) {
-          console.error('500 Server error:', error.message);
+          console.error('Server error:', error.message);
         }
-
         return throwError(() => error);
       })
     );

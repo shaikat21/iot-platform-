@@ -4,9 +4,8 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import { provideOAuthClient } from 'angular-oauth2-oidc';
-import { AuthService } from './core/auth/auth.service';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
-import { AuthInterceptor } from './core/auth/auth.interceptor';
+import { AuthInterceptor } from './core/interceptors/auth-interceptor';
 
 
 export const appConfig: ApplicationConfig = {

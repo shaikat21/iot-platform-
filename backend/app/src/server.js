@@ -10,9 +10,12 @@ import { zitadelAuth } from "./auth/zitadelAuth.js";
 import { checkAudience } from "./auth/checkAudience.js";
 import { userID } from "./auth/userRoleID.js";
 import { requireAnonToken } from "./auth/requireAnonToken.js";
+import http from "http";
+import { initWs } from "./services/wsServer.js";
+import { requireAuth } from "./auth/requireAuth.js";
+
 
 console.log("ACTUAL DATABASE_URL:", config.db.url);
-
 
 const app = express();
 
@@ -66,7 +69,7 @@ app.use(userID);
 // ENFORCE anon token everywhere except /api/auth/anontoken
 // please uncomment app.use(requireAnonToken); once FE configured to use anon_token for unauthenticated public endpoint
 
-//app.use(requireAnonToken);
+app.use(requireAnonToken);
 
 // API Routes
 app.use("/api", routes);
@@ -85,6 +88,19 @@ app.use((err, req, res, next) => {
   }
 
   return res.status(500).json({ error: "Internal server error" });
+});
+
+// Create HTTP server (required for WebSocket upgrade)
+const server = http.createServer(app);
+
+// Attach WebSocket with SAME auth chain (AUTH USERS ONLY)
+initWs(server, {
+  middlewares: [
+    zitadelAuth,
+    checkAudience,
+    userID,
+    requireAuth,
+  ],
 });
 
 // Start server

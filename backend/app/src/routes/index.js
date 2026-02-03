@@ -6,7 +6,7 @@ import emqxRoutes from "./emqxRoutes.js";
 import anonTokenRoutes from "./anonTokenRoutes.js";
 import meRoutes from "./meRoutes.js";
 import sessionRoutes from "./sessionRoutes.js";
-
+import cookieRoutes from "./cookieRoutes.js";
 
 
 const router = Router();
@@ -18,6 +18,7 @@ router.use("/emqx", emqxRoutes);
 router.use("/anontoken", anonTokenRoutes);
 router.use("/me", meRoutes);
 router.use("/session", sessionRoutes);
+router.use("/cookie", cookieRoutes);
 
 
 export default router;

@@ -4,6 +4,8 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import { getDeviceById } from "../models/deviceModel.js";   // <-- your DB lookup
 import { setDeviceOnline } from "../models/deviceModel.js";
+import { config } from "../config/env.js";
+import { requireEmqx } from "../middleware/emqxOnly.js";
 
 const router = express.Router();
 
@@ -16,7 +18,7 @@ const router = express.Router();
  *   "password": "<deviceToken>"
  * }
  */
-router.post("/auth", async (req, res) => {
+router.post("/auth", requireEmqx, async (req, res) => {
   const { username: deviceId, password: deviceToken } = req.body;
 
   if (!deviceId || !deviceToken) {
@@ -26,7 +28,7 @@ router.post("/auth", async (req, res) => {
 
     // 1 BACKEND JWT AUTH
     try {
-      const decoded = jwt.verify(deviceToken, process.env.MQTT_JWT_SECRET);
+      const decoded = jwt.verify(deviceToken, config.emwqx.authSecret);
 
       if (decoded?.role === "backend" && decoded?.username === deviceId) {
         return res.json({ result: "allow" });
@@ -74,7 +76,7 @@ router.post("/superuser", (_req, res) => {
 });
 
 
-router.post("/webhook", async (req, res) => {
+router.post("/webhook", requireEmqx, async (req, res) => {
   const data = req.body;
 
   //console.log("EMQX WEBHOOK RECEIVED:", data);

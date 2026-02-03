@@ -7,7 +7,7 @@ export const generateBackendJwt = () => {
       username: config.mqtt.clientId,
       role: "backend"
     },
-    process.env.MQTT_JWT_SECRET,
+    config.emwqx.authSecret,
     { expiresIn: "15m" }
   );
 };

@@ -44,5 +44,9 @@ export const config = {
     serviceClientSecret2: `${getEnv("ZITADEL_SERVICE_CLIENT_SECRET2")}`,
   },
 
+  emwqx: {
+    authSecret: getEnv("EMQX_AUTH_SECRET"),
+  },
+
   corsOrigins: getEnv("CORS_ORIGINS", "").split(",").filter(Boolean)
 };

@@ -4,17 +4,22 @@
 export function requireAnonToken(req, res, next) {
 
   // Allow anon token mint endpoint ONLY
-  if (req.path === "/api/auth/anontoken") {
+  if (req.path === "/api/anontoken") {
     return next();
   }
 
-  // Allow webhook endpoints (external services)
-  if (req.path.startsWith("/api/webhook/github")) {
+  // Allow webhook endpoints (emqx services)
+  if (req.path.startsWith("/api/emqx/webhook")) {
     return next();
   }
 
-  // Allow health endpoints (external services)
-  if (req.path.startsWith("/health")) {
+   // Allow webhook endpoints (emqx services)
+  if (req.path.startsWith("/api/emqx/auth")) {
+    return next();
+  }
+
+  // Allow health endpoints (health services)
+  if (req.path.startsWith("/api/health")) {
     return next();
   }
 

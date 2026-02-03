@@ -77,29 +77,29 @@ export const getMyDeviceById = async (req, res) => {
 };
 
 // Issue JWT for device → used by ESP32
-export const issueDeviceToken = async (req, res) => {
-  try {
-    const userId = getUserIdFromRequest(req);
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-    const { deviceId } = req.params;
-    const device = await getDeviceByIdForUser(userId, deviceId);
-
-    if (!device) return res.status(404).json({ error: "Device not found" });
-
-    const token = jwt.sign(
-      {
-        sub: device.device_id,
-        owner: userId,
-        role: "device"
-      },
-      config.deviceJwtSecret,
-      { expiresIn: "12h" }
-    );
-
-    return res.json({ token, expiresIn: 12 * 3600 });
-  } catch (err) {
-    console.error("[issueDeviceToken] error:", err);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
+//export const issueDeviceToken = async (req, res) => {
+//  try {
+//    const userId = getUserIdFromRequest(req);
+//    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+//
+//    const { deviceId } = req.params;
+//    const device = await getDeviceByIdForUser(userId, deviceId);
+//
+//    if (!device) return res.status(404).json({ error: "Device not found" });
+//
+//    const token = jwt.sign(
+//      {
+//        sub: device.device_id,
+//        owner: userId,
+//        role: "device"
+//      },
+//      config.deviceJwtSecret,
+//      { expiresIn: "12h" }
+//    );
+//
+//    return res.json({ token, expiresIn: 12 * 3600 });
+//  } catch (err) {
+//    console.error("[issueDeviceToken] error:", err);
+//    return res.status(500).json({ error: "Internal server error" });
+//  }
+//};

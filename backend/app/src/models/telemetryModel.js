@@ -1,22 +1,65 @@
 import { db } from "../config/db.js";
 
-export const insertTelemetry = async (deviceId, payload) => {
-  const q = `
-    INSERT INTO telemetry (device_id, payload)
-    VALUES ($1, $2)
-    RETURNING id`;
 
-  const result = await db.query(q, [deviceId, payload]);
+// ---------- INSERT TELEMETRY ----------
+export const insertTelemetry = async ({
+  deviceId,
+  metric,
+  category = null,
+  unit = null,
+  qos = null,
+  topic = null,
+  valueNum = null,
+  valueBool = null,
+}) => {
+  const q = `
+    INSERT INTO telemetry (
+      device_id,
+      metric,
+      category,
+      unit,
+      qos,
+      topic,
+      value_num,
+      value_bool
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING id
+  `;
+
+  const result = await db.query(q, [
+    deviceId,
+    metric,
+    category,
+    unit,
+    qos,
+    topic,
+    valueNum,
+    valueBool,
+  ]);
+
   return result.rows[0];
 };
 
+// ---------- GET TELEMETRY ----------
 export const getTelemetry = async (deviceId, limit = 100) => {
   const q = `
-    SELECT *
+    SELECT
+      id,
+      device_id,
+      metric,
+      category,
+      unit,
+      qos,
+      topic,
+      value_num,
+      value_bool,
+      timestamp
     FROM telemetry
     WHERE device_id = $1
     ORDER BY timestamp DESC
-    LIMIT $2`;
+    LIMIT $2
+  `;
 
   const result = await db.query(q, [deviceId, limit]);
   return result.rows;
