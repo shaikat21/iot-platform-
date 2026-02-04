@@ -1,0 +1,2 @@
+curl -i http://192.168.0.104:8086/api/devices \
+  -H "Authorization: Bearer TOKEN"

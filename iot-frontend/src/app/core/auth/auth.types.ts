@@ -4,7 +4,14 @@ import { UserRoles } from '../../shared/enums/user-roles.enum';
 export interface AuthSession {
   authenticated: boolean;
   userId?: string;
-  roles: UserRoles[];
+  //roles: UserRoles[];
+  roles: string[];
   isAdmin?: boolean;
   isUser?: boolean;
 }
+
+//export interface AuthSession {
+//  authenticated: boolean;
+//  userId: string;
+//  roles: string[];
+//}

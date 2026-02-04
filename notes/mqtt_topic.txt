@@ -1,1 +1,2 @@
 tele/<deviceId>/<metric>
+tele/123/motion payload true

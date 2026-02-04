@@ -1,7 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, from, shareReplay, finalize } from 'rxjs';
+import { tap, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../auth/auth.service';
+
 
 export interface CurrentUser {
   userId: string;
@@ -11,71 +14,51 @@ export interface CurrentUser {
   emailVerified: boolean;
 }
 
-export interface AuthSession {
-  authenticated: boolean;
-  userId: string;
-  roles: string[];
-}
-
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
+
+  private meInFlight$?: Observable<CurrentUser>;
   private baseUrl = environment.api.baseUrl;
-  private storageKey = 'currentUser';
 
   private currentUserSubject = new BehaviorSubject<CurrentUser | null>(null);
   public currentUser$: Observable<CurrentUser | null> = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient) {
-    const storedUser = localStorage.getItem(this.storageKey);
-    if (storedUser) {
-      try {
-        this.currentUserSubject.next(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem(this.storageKey);
-      }
-    }
+  constructor(private http: HttpClient, private injector: Injector) {}
+
+  private get auth(): AuthService {
+  return this.injector.get(AuthService);
   }
 
-  getSession(): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/session`);
-  }
 
   getMe(): Observable<CurrentUser> {
-    return this.http.get<CurrentUser>(`${this.baseUrl}/me`).pipe(
-      tap((user) => this.setCurrentUser(user))
+  // If multiple callers ask at the same time, reuse the same request.
+  if (!this.meInFlight$) {
+    this.meInFlight$ = this.http.get<CurrentUser>(`${this.baseUrl}/me`).pipe(
+      tap((user) => this.setCurrentUser(user)),
+      shareReplay(1),
+      finalize(() => {
+        // Allow a future refresh (e.g., after login refresh/logout/login)
+        this.meInFlight$ = undefined;
+      })
     );
   }
 
-  // sync getter
+  return this.meInFlight$;
+}
+
   getCurrentUser(): CurrentUser | null {
     return this.currentUserSubject.value;
   }
 
   setCurrentUser(user: CurrentUser): void {
-    localStorage.setItem(this.storageKey, JSON.stringify(user));
     this.currentUserSubject.next(user);
   }
 
-  getAnonToken(): Observable<any> {
-    return this.http.post<any>(
-      `${this.baseUrl}/anontoken`,
-      {},
-      {
-        headers: {
-          'x-iot-fe-key': environment.anon_token_secret
-        }
-      }
-    );
-  }
-
   clearCurrentUser(): void {
-    localStorage.removeItem(this.storageKey);
-    localStorage.removeItem('auth_token');
     this.currentUserSubject.next(null);
   }
 
-  // convenience getters
   get userName(): string {
     return this.getCurrentUser()?.name ?? '';
   }

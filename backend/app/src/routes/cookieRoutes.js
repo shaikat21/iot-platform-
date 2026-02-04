@@ -1,10 +1,10 @@
 // src/routes/cookieRoutes.js
-import express from "express";
+import Router from "express";
 import { config } from "../config/env.js";
 import { requireAuth } from "../auth/requireAuth.js";
 import { authorize } from "../auth/authorize.js";
 
-const router = express.Router();
+const router = Router();
 
 function pickCookieDomainFromCorsOrigins(corsOrigins = []) {
   // Prefer a real domain (not localhost). If not found, return null (host-only cookie)

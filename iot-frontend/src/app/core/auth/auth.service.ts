@@ -10,7 +10,7 @@ import {
   AuthConfig,
 } from 'angular-oauth2-oidc';
 import { BehaviorSubject, Observable, firstValueFrom, of } from 'rxjs';
-import { catchError, filter, map, tap } from 'rxjs/operators';
+import { catchError, map, tap } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { UserService } from '../service/user.service';
 import { PushService } from '../service/push.service';
@@ -22,7 +22,19 @@ import { authConfig } from './auth.config';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  
+  private eventsWired = false;
 
+  private syncInFlight?: Promise<void>;
+
+  private lastCookieExchangedForToken?: string;
+  private cookieExchangeInFlight?: Promise<void>;
+
+  private lastMeFetchedForToken?: string;
+  private meFetchInFlight?: Promise<void>;
+
+  private authCookieCleared = false;
+  
   private readyResolve!: () => void;
   private readyPromise = new Promise<void>((resolve) => {
     this.readyResolve = resolve;
@@ -58,6 +70,11 @@ export class AuthService {
     this.initialize();
   }
 
+ready(): Promise<void> {
+  return this.readyPromise;
+}
+
+
   private async initialize(): Promise<void> {
   try {
     this.oauth.configure(authConfig);
@@ -67,7 +84,7 @@ export class AuthService {
     });
 
     this.wireEvents();
-    this.syncUserFromTokens();
+    await this.syncUserFromTokens();
     this.oauth.setupAutomaticSilentRefresh();
   } catch (e) {
     console.error('Auth init error:', e);
@@ -79,18 +96,23 @@ export class AuthService {
 
 
   private wireEvents(): void {
+    if (this.eventsWired) return;
+    this.eventsWired = true;
+
     this.oauth.events.subscribe((e: OAuthEvent) => {
-      // Token received / refreshed
       if (e.type === 'token_received' || e.type === 'token_refreshed') {
         this.syncUserFromTokens();
       }
 
-      // Logout / session terminated
       if (e.type === 'logout' || e.type === 'session_terminated' || e.type === 'session_error') {
         this.user$.next(null);
+
+        // reset per-token guards so next login works cleanly
+        this.lastCookieExchangedForToken = undefined;
+        this.lastMeFetchedForToken = undefined;
+        this.authCookieCleared = false;
       }
 
-      // Errors
       if (e instanceof OAuthErrorEvent) {
         console.error('OAuth error event:', e);
         this.authError$.next(e);
@@ -98,42 +120,123 @@ export class AuthService {
     });
   }
 
+
+  // call annon cokie
+
+  private anonCookieOnce?: Promise<void>;
+
+  private ensureAnonCookieOnceInternal(): Promise<void> {
+    if (this.anonCookieOnce) return this.anonCookieOnce;
+  
+    this.anonCookieOnce = firstValueFrom(
+      this.http.post(
+        `${environment.api.baseUrl}/anon-cookie`,
+        {},
+        {
+          withCredentials: true,
+          headers: { 'x-iot-fe-key': environment.anon_token_secret },
+        }
+      )
+    )
+      .then(() => undefined)
+      .catch(() => undefined); // never block app
+  
+    return this.anonCookieOnce;
+  }
+
+  ensureAnonCookieOnce(): Promise<void> {
+  return this.ensureAnonCookieOnceInternal();
+}
+
+
+// sync identity from tokens to user$
   private async syncUserFromTokens(): Promise<void> {
-    const claims = this.oauth.getIdentityClaims() as any | null;
+    // Global de-dupe: if multiple callers trigger this at once, run only once.
+    if (this.syncInFlight) return this.syncInFlight;
 
-    // keep your existing "user" concept similar to oidc-client-ts User
-    const accessToken = this.oauth.getAccessToken();
-    const idToken = this.oauth.getIdToken();
+    this.syncInFlight = (async () => {
+      const claims = this.oauth.getIdentityClaims() as any | null;
+      const accessToken = this.oauth.getAccessToken();
+      const idToken = this.oauth.getIdToken();
 
-    if (!accessToken || !this.oauth.hasValidAccessToken()) {
-      this.user$.next(null);
-      return;
-    }
+      if (!accessToken || !this.oauth.hasValidAccessToken()) {
+        this.user$.next(null);
 
-    // store token if you want (but interceptor is better than localStorage)
-    localStorage.setItem('auth_token', accessToken);
+        const url = window.location.href;
+        const inCallback = url.includes('code=') || url.includes('state=');
 
-    // push claims into stream
-    this.user$.next({
-      ...claims,
-      access_token: accessToken,
-      id_token: idToken,
-      expires_at: this.oauth.getAccessTokenExpiration(), // epoch ms
+        if (!inCallback) {
+          await this.ensureAnonCookieOnceInternal();
+        }
+        return;
+        }
+
+      // Always keep your user$ updated (cheap, no network)
+      this.user$.next({
+        ...claims,
+        access_token: accessToken,
+        id_token: idToken,
+        expires_at: this.oauth.getAccessTokenExpiration(),
+      });
+
+      // 1) Exchange token -> HttpOnly cookie (ONLY once per token, and only one in-flight)
+      if (this.lastCookieExchangedForToken !== accessToken) {
+        if (!this.cookieExchangeInFlight) {
+          this.cookieExchangeInFlight = firstValueFrom(
+            this.http.post(
+              `${environment.api.baseUrl}/cookie`,
+              {},
+              {
+                withCredentials: true,
+                headers: { Authorization: `Bearer ${accessToken}` },
+              }
+            )
+          )
+            .then(() => {
+              this.lastCookieExchangedForToken = accessToken;
+              this.authCookieCleared = false;
+            })
+            .catch((e) => {
+              // don't break login if cookie fails
+              console.warn('Failed to set auth cookie', e);
+            })
+            .finally(() => {
+              this.cookieExchangeInFlight = undefined;
+            });
+        }
+
+        await this.cookieExchangeInFlight;
+      }
+
+      // 2) /me + push subscribe (ONLY once per token, and only one in-flight)
+      if (this.lastMeFetchedForToken !== accessToken) {
+        if (!this.meFetchInFlight) {
+          this.meFetchInFlight = (async () => {
+ //           try {
+ //             const currentUser: any = await firstValueFrom(this.userService.getMe());
+ //             if (currentUser) {
+ //               currentUser.sub = currentUser.userId;
+ //               this.userService.setCurrentUser(currentUser);
+ //               await this.pushService.subscribe();
+ //               this.lastMeFetchedForToken = accessToken;
+ //             }
+ //           } catch (e) {
+ //             console.warn('getMe/push subscribe failed:', e);
+ //           }
+          })().finally(() => {
+            this.meFetchInFlight = undefined;
+          });
+        }
+
+        await this.meFetchInFlight;
+      }
+    })().finally(() => {
+      this.syncInFlight = undefined;
     });
 
-    // replicate your “after login” flow
-    try {
-      const currentUser: any = await firstValueFrom(this.userService.getMe());
-      if (currentUser) {
-        currentUser.sub = currentUser.userId;
-        this.userService.setCurrentUser(currentUser);
-        await this.pushService.subscribe();
-      }
-    } catch (e) {
-      // don’t break auth if /me fails
-      console.warn('getMe/push subscribe failed:', e);
-    }
+    return this.syncInFlight;
   }
+
 
   /** Similar to getUser() in oidc-client-ts */
   getUser(): Observable<any | null> {
@@ -192,8 +295,9 @@ export class AuthService {
    */
   async signinCallback(): Promise<void> {
     try {
-      await this.oauth.loadDiscoveryDocumentAndTryLogin();
-      await this.oauth.tryLoginCodeFlow();
+      await this.ready();
+      //await this.oauth.loadDiscoveryDocumentAndTryLogin();
+      //await this.oauth.tryLoginCodeFlow();
       await this.syncUserFromTokens();
 
       // redirect to intercepted path if any
@@ -216,9 +320,9 @@ export class AuthService {
       console.error('signoutRedirect error:', e);
       this.authError$.next(e);
       throw e;
-    } finally {
-      this.cleanupAfterSignout();
-    }
+    } //finally {
+      //this.cleanupAfterSignout();
+   // }
   }
 
   /**
@@ -233,6 +337,7 @@ export class AuthService {
       this.authError$.next(e);
       throw e;
     } finally {
+      //this.clearAuthCookie();
       this.cleanupAfterSignout();
     }
   }
@@ -246,21 +351,79 @@ export class AuthService {
     return localStorage.getItem('authGuardInterceptedPathname') || '/';
   }
 
-  private cleanupAfterSignout(): void {
-  this.user$.next(null);
-  localStorage.removeItem('authGuardInterceptedPathname');
-  localStorage.removeItem('auth_token');
+
+async clearAuthCookie(): Promise<void> {
+  if (this.authCookieCleared) {
+    console.debug('[Auth] clearAuthCookie skipped (already cleared)');
+    return;
+  }
+  this.authCookieCleared = true;
+  try {
+    await firstValueFrom(
+      this.http.delete(`${environment.api.baseUrl}/cookie`, { withCredentials: true })
+    );
+  } catch (e) {
+    // ignore (token may already be gone)
+  }
 }
 
-  async getSession(): Promise<AuthSession | null> {
-    try {
-      return await firstValueFrom(
-        this.http.get<AuthSession>(`${environment.api.baseUrl}/session`)
-      );
-    } catch (err) {
-      return null;
-    }
+private cleanupAfterSignout(): void {
+  this.user$.next(null);
+  localStorage.removeItem('authGuardInterceptedPathname');
+  localStorage.removeItem('currentUser');
+
+  // clear HttpOnly cookie on backend
+  this.clearAuthCookie();
+  this.ensureAnonCookieOnceInternal();
+}
+
+
+
+//  private cleanupAfterSignout(): void {
+//  this.user$.next(null);
+//  localStorage.removeItem('authGuardInterceptedPathname');
+//  localStorage.removeItem('auth_token');
+//}
+
+
+private sessionInFlight?: Promise<AuthSession | null>;
+private sessionCache?: { value: AuthSession | null; expiresAt: number };
+
+
+async getSession(force = false): Promise<AuthSession | null> {
+  const now = Date.now();
+
+  // Optional: tiny cache to avoid re-fetch within same boot burst (enterprise pattern)
+  if (!force && this.sessionCache && this.sessionCache.expiresAt > now) {
+    return this.sessionCache.value;
   }
+
+  if (this.sessionInFlight) return this.sessionInFlight;
+
+  this.sessionInFlight = (async () => {
+    try {
+      // ensure auth init finished first (important on refresh)
+      await this.whenReady();
+
+      const s = await firstValueFrom(
+        this.http.get<AuthSession>(`${environment.api.baseUrl}/session`, {
+          withCredentials: true,
+        })
+      );
+
+      // cache for a short burst (e.g. 1s) to prevent immediate duplicates
+      this.sessionCache = { value: s, expiresAt: now + 1000 };
+      return s;
+    } catch {
+      this.sessionCache = { value: null, expiresAt: now + 1000 };
+      return null;
+    } finally {
+      this.sessionInFlight = undefined;
+    }
+  })();
+
+  return this.sessionInFlight;
+}
 
   
 

@@ -3,6 +3,11 @@
 
 export function requireAnonToken(req, res, next) {
 
+  // Allow anon token cookie endpoint ONLY
+  if (req.path === "/api/anon-cookie") {
+    return next();
+  }
+
   // Allow anon token mint endpoint ONLY
   if (req.path === "/api/anontoken") {
     return next();

@@ -7,6 +7,7 @@ import anonTokenRoutes from "./anonTokenRoutes.js";
 import meRoutes from "./meRoutes.js";
 import sessionRoutes from "./sessionRoutes.js";
 import cookieRoutes from "./cookieRoutes.js";
+import anonCookieRoutes from "./anonCookieRoutes.js";
 
 
 const router = Router();
@@ -19,6 +20,8 @@ router.use("/anontoken", anonTokenRoutes);
 router.use("/me", meRoutes);
 router.use("/session", sessionRoutes);
 router.use("/cookie", cookieRoutes);
+router.use("/anon-cookie", anonCookieRoutes);
+
 
 
 export default router;

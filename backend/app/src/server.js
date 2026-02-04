@@ -13,6 +13,8 @@ import { requireAnonToken } from "./auth/requireAnonToken.js";
 import http from "http";
 import { initWs } from "./services/wsServer.js";
 import { requireAuth } from "./auth/requireAuth.js";
+import { cookieAuthBridge } from "./auth/cookieAuth.js";
+
 
 
 console.log("ACTUAL DATABASE_URL:", config.db.url);
@@ -55,6 +57,7 @@ if (config.corsOrigins.length > 0) {
    AUTH CHAIN — required for user/admin endpoints
    BUT allows anonymous because zitadelAuth is optional
    ===================================================== */
+app.use(cookieAuthBridge);
 app.use(zitadelAuth);
 app.use(checkAudience);
 app.use(userID);
