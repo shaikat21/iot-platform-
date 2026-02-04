@@ -1,16 +1,25 @@
 // src/services/wsServer.js
 import { WebSocketServer } from "ws";
+import { config } from "../config/env.js";
 
 function getCookie(req, name) {
   const raw = req.headers.cookie;
   if (!raw) return null;
+
   const parts = raw.split(";").map((s) => s.trim());
   for (const p of parts) {
     const idx = p.indexOf("=");
     if (idx === -1) continue;
+
     const k = p.slice(0, idx);
     const v = p.slice(idx + 1);
-    if (k === name) return decodeURIComponent(v);
+    if (k !== name) continue;
+
+    try {
+      return decodeURIComponent(v);
+    } catch {
+      return v; // fallback (avoid throwing on bad encoding)
+    }
   }
   return null;
 }
@@ -38,7 +47,8 @@ function runMiddlewares(middlewares, req) {
     next();
   });
 }
-   export function initWs(server, { middlewares = [] } = {}) {
+
+export function initWs(server, { middlewares = [] } = {}) {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on("upgrade", async (req, socket, head) => {
@@ -50,21 +60,22 @@ function runMiddlewares(middlewares, req) {
         return;
       }
 
-      // ORIGIN CHECK (🔒 REQUIRED for cookie-based auth)
+      // ORIGIN CHECK (required for cookie-based auth)
       const origin = req.headers.origin;
-      if (
-        origin &&
-        config.corsOrigins.length &&
-        !config.corsOrigins.includes(origin)
-      ) {
+      if (origin && config.corsOrigins?.length && !config.corsOrigins.includes(origin)) {
         socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
         socket.destroy();
         return;
       }
 
-      // Inject Authorization header from HttpOnly cookie
+      // AUTH USERS ONLY: Inject Authorization header from HttpOnly cookie
       const token = getCookie(req, "iot_access");
-      if (token && !req.headers.authorization) {
+      if (!token) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+      if (!req.headers.authorization) {
         req.headers.authorization = `Bearer ${token}`;
       }
 
@@ -81,16 +92,51 @@ function runMiddlewares(middlewares, req) {
         wss.emit("connection", ws, req);
       });
     } catch (err) {
-      try {
-        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
-      } catch {}
+      try { socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n"); } catch {}
       socket.destroy();
     }
   });
 
+  // Connection handler
   wss.on("connection", (ws) => {
-    ws.send(JSON.stringify({ type: "connected", ts: Date.now() }));
+    ws.isAlive = true;
+
+    ws.on("pong", () => { ws.isAlive = true; });
+
+    // Avoid unhandled error events
+    ws.on("error", (err) => {
+      console.warn("[WS] socket error", err?.message || err);
+    });
+
+    ws.send(JSON.stringify({
+      type: "connected",
+      ts: Date.now(),
+      userId: ws.userId,
+    }));
   });
 
-  return { wss };
+  // Heartbeat to detect dead connections
+  const interval = setInterval(() => {
+    for (const ws of wss.clients) {
+      if (ws.readyState !== ws.OPEN) continue;
+
+      if (ws.isAlive === false) {
+        ws.terminate();
+        continue;
+      }
+      ws.isAlive = false;
+      try { ws.ping(); } catch {}
+    }
+  }, 30_000);
+
+  // Cleanup when underlying HTTP server closes
+  const cleanup = () => {
+    clearInterval(interval);
+    try { wss.close(); } catch {}
+  };
+
+  server.on("close", cleanup);
+  server.on("error", cleanup);
+
+  return { wss, cleanup };
 }

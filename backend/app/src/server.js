@@ -49,7 +49,7 @@ if (config.corsOrigins.length > 0) {
   // IMPORTANT: respond to preflight before routes
   app.options("*", corsMiddleware);
 } else {
-  app.use(cors());
+  app.use(cors({credentials: true}));
   app.options("*", cors());
 }
 
@@ -107,7 +107,7 @@ initWs(server, {
 });
 
 // Start server
-app.listen(config.port, () => {
+server.listen(config.port, () => {
   console.log(`IoT backend listening on port ${config.port}`);
   initMqtt(); 
   initTables();
