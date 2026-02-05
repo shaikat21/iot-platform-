@@ -130,7 +130,7 @@ ready(): Promise<void> {
   
     this.anonCookieOnce = firstValueFrom(
       this.http.post(
-        `${environment.api.baseUrl}/anon-cookie`,
+        `${environment.api.baseUrl}/api/anon-cookie`,
         {},
         {
           withCredentials: true,
@@ -184,7 +184,7 @@ ready(): Promise<void> {
         if (!this.cookieExchangeInFlight) {
           this.cookieExchangeInFlight = firstValueFrom(
             this.http.post(
-              `${environment.api.baseUrl}/cookie`,
+              `${environment.api.baseUrl}/api/cookie`,
               {},
               {
                 withCredentials: true,
@@ -360,7 +360,7 @@ async clearAuthCookie(): Promise<void> {
   this.authCookieCleared = true;
   try {
     await firstValueFrom(
-      this.http.delete(`${environment.api.baseUrl}/cookie`, { withCredentials: true })
+      this.http.delete(`${environment.api.baseUrl}/api/cookie`, { withCredentials: true })
     );
   } catch (e) {
     // ignore (token may already be gone)
@@ -406,7 +406,7 @@ async getSession(force = false): Promise<AuthSession | null> {
       await this.whenReady();
 
       const s = await firstValueFrom(
-        this.http.get<AuthSession>(`${environment.api.baseUrl}/session`, {
+        this.http.get<AuthSession>(`${environment.api.baseUrl}/api/session`, {
           withCredentials: true,
         })
       );

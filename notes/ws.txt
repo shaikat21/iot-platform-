@@ -1,0 +1,6 @@
+const ws = new WebSocket("ws://192.168.0.104:8086/ws");
+
+ws.onopen = () => console.log("✅ WS OPEN");
+ws.onmessage = (e) => console.log("📩", e.data);
+ws.onerror = (e) => console.log("❌ WS ERROR", e);
+ws.onclose = (e) => console.log("🔌 WS CLOSED", e.code, e.reason);

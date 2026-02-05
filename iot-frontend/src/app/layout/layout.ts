@@ -1,14 +1,8 @@
 // iot-frontend/src/app/layout/layout.ts
 import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { isPlatformBrowser } from '@angular/common';
-import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
-import {MatMenuModule} from '@angular/material/menu';
-import { DeviceService } from '../platformDetection/platform-detect.service';
 import { AuthService } from '../core/auth/auth.service';
 import { CurrentUser, UserService } from '../core/service/user.service';
 import type { AuthSession } from '../core/auth/auth.types';
@@ -40,12 +34,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef
   ) {}
 
-  async ngOnInit() {
+ async ngOnInit() {
   this.userService.currentUser$
     .pipe(takeUntil(this.destroy$))
     .subscribe((u) => {
-      this.user = u;
-      this.cdr.detectChanges();
+      this.safeSet(() => {
+        this.user = u;
+      });
     });
 
   // wait for auth bootstrap
@@ -53,24 +48,29 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   const s = await this.auth.getSession();
 
-  this.session = s;
-  this.loggedIn = !!s?.authenticated;
+  this.safeSet(() => {
+    this.session = s;
+    this.loggedIn = !!s?.authenticated;
+  });
 
-  if (!this.loggedIn) {
+  if (!s?.authenticated) {
     await this.auth.ensureAnonCookieOnce();
-    this.user = null;
-    this.cdr.detectChanges();
+    this.safeSet(() => {
+      this.user = null;
+    });
     return;
   }
 
   this.userService.getMe().subscribe({
     next: (me) => {
-      this.user = me;
-      this.cdr.detectChanges();
+      this.safeSet(() => {
+        this.user = me;
+      });
     },
     error: () => {}
   });
 }
+
 
 
   ngOnDestroy() {
@@ -85,7 +85,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
   logout() {
     this.userService.clearCurrentUser();
     this.auth.signoutRedirect();
-    // ✅ no anon-cookie call here
   }
 
   get userName(): string {
@@ -95,4 +94,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
   get isAdmin(): boolean {
     return this.session?.roles?.includes('admin') ?? false;
   }
+ 
+  private safeSet(fn: () => void) {
+  queueMicrotask(() => {
+    fn();
+    this.cdr.markForCheck();
+  });
 }
+
+}
+

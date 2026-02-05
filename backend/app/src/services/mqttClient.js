@@ -3,12 +3,16 @@ import mqtt from "mqtt";
 import { generateBackendJwt } from "../utils/backendJwt.js";
 import { config } from "../config/env.js";
 import { insertTelemetry } from "../models/telemetryModel.js";
-import { METRIC_DEFINITIONS } from "../middleware/metricRegistry.js";
+import { getMetricDefinition, initMetricRegistry } from "../middleware/metricRegistry.js";
+import { getOwnerIdByDeviceId } from "../models/deviceModel.js"
+import { wsSendToUser } from "./wsServer.js";
 
 let client;
 
-export const initMqtt = () => {
+export const initMqtt = async () => {
   const url = `mqtt://${config.mqtt.host}:${config.mqtt.port}`;
+
+  await initMetricRegistry();
 
   const connectWithJwt = () => {
     const token = generateBackendJwt();
@@ -72,7 +76,7 @@ export const initMqtt = () => {
     const deviceId = match[1];
     const metric = match[2];
 
-    const def = METRIC_DEFINITIONS[metric];
+    const def = getMetricDefinition(metric);
     if (!def) {
       console.warn("[MQTT] Unknown metric:", metric);
       return;
@@ -93,6 +97,23 @@ export const initMqtt = () => {
       valueNum,
       valueBool,
     });
+
+    // LIVE STREAM to dashboard (per-user WS)
+  const ownerId = await getOwnerIdByDeviceId(deviceId);
+  if (ownerId) {
+    wsSendToUser(ownerId, {
+      type: "telemetry",
+      deviceId,
+      metric,
+      category: def.category,
+      unit: def.unit,
+      topic,
+      qos: packet.qos,
+      valueNum: valueNum ?? null,
+      valueBool: valueBool ?? null,
+      ts: Date.now(),
+    });
+  }
 
     console.log(
       "[MQTT] saved:",

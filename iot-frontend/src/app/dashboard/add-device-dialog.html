@@ -1,0 +1,51 @@
+<h2 mat-dialog-title>Add Device</h2>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" style="padding: 1rem; display:flex; flex-direction:column; gap:12px;">
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Device ID</mat-label>
+        <input matInput formControlName="deviceId" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Serial Number</mat-label>
+        <input matInput formControlName="serialNumber" required />
+      </mat-form-field>
+
+      <!-- Metrics (optional) -->
+      <ng-container *ngIf="categories.length">
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Device Category</mat-label>
+          <mat-select [formControl]="categoryCtrl">
+            <mat-option *ngFor="let c of categories" [value]="c">{{ c }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div style="border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 12px;">
+          <div style="margin-bottom: 8px; opacity: 0.8;">Select metrics</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <mat-checkbox
+                *ngFor="let m of metricsForSelectedCategory()"
+                [checked]="selectedMetricKeys.has(m.metric_key)"
+                (change)="toggleMetric(m.metric_key, $event.checked)"
+              >
+                <span style="display:flex; justify-content:space-between; width:100%; gap:12px;">
+                  <span>{{ m.metric_key }}</span>
+                  <span style="opacity:.7;">{{ m.unit || m.value_type }}</span>
+                </span>
+              </mat-checkbox>
+            </div>
+        </div>
+      </ng-container>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1rem;">
+        <button mat-button type="button" (click)="close()">Cancel</button>
+        <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || loading">
+          {{ loading ? 'Saving…' : 'Save' }}
+        </button>
+      </div>
+    </form>

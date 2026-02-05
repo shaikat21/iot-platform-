@@ -1,4 +1,4 @@
-// ----- DO NOT TOUCH zitadelAuth -----
+// ----- DO NOT TOUCH Reqanontoken -----
 // This enforces that *some* valid token exists
 
 export function requireAnonToken(req, res, next) {

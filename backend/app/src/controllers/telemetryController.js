@@ -1,3 +1,5 @@
+// backend/app/src/controllers/telemetryController.js
+
 import { getUserIdFromRequest } from "../auth/userRoleID.js";
 import { getDeviceByIdForUser } from "../models/deviceModel.js";
 import { insertTelemetry, getTelemetry } from "../models/telemetryModel.js";

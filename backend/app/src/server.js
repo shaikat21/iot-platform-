@@ -5,7 +5,7 @@ import morgan from "morgan";
 import { config } from "./config/env.js";
 import { initMqtt } from "./services/mqttClient.js";
 import routes from "./routes/index.js";
-import { initTables } from "./models/deviceModel.js";
+import { initTables } from "./models/dbInit.js";
 import { zitadelAuth } from "./auth/zitadelAuth.js";
 import { checkAudience } from "./auth/checkAudience.js";
 import { userID } from "./auth/userRoleID.js";

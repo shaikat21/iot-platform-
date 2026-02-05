@@ -7,6 +7,7 @@ import {
   registerDevice,
   listMyDevices,
   getMyDeviceById,
+  deleteMyDevice,
   //issueDeviceToken
 } from "../controllers/deviceController.js";
 
@@ -26,6 +27,7 @@ router.get("/", listMyDevices);
 
 // Get one device owned by user
 router.get("/:deviceId", getMyDeviceById);
+router.delete("/:deviceId", deleteMyDevice);
 
 // Issue device token for device owned by user
 //router.post("/:deviceId/token", issueDeviceToken);

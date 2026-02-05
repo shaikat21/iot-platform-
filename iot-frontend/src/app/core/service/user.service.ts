@@ -19,7 +19,7 @@ export interface CurrentUser {
 export class UserService {
 
   private meInFlight$?: Observable<CurrentUser>;
-  private baseUrl = environment.api.baseUrl;
+  private baseUrl = `${environment.api.baseUrl}/api`;
 
   private currentUserSubject = new BehaviorSubject<CurrentUser | null>(null);
   public currentUser$: Observable<CurrentUser | null> = this.currentUserSubject.asObservable();

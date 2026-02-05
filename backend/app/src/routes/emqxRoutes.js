@@ -6,6 +6,7 @@ import { getDeviceById } from "../models/deviceModel.js";   // <-- your DB looku
 import { setDeviceOnline } from "../models/deviceModel.js";
 import { config } from "../config/env.js";
 import { requireEmqx } from "../middleware/emqxOnly.js";
+import { wsSendToUser } from "../services/wsServer.js";
 
 const router = express.Router();
 
@@ -79,23 +80,44 @@ router.post("/superuser", (_req, res) => {
 router.post("/webhook", requireEmqx, async (req, res) => {
   const data = req.body;
 
-  //console.log("EMQX WEBHOOK RECEIVED:", data);
-
   try {
-    // EMQX sends "event": "client.connected" or "client.disconnected"
     const evt = data.event;
     const deviceId = data.clientid;
 
+    if (!deviceId) {
+      console.warn("[EMQX] webhook missing clientid:", data);
+      return res.json({ success: true });
+    }
+
     if (evt === "client.connected") {
-      console.log("Device connected:", deviceId);
-      await setDeviceOnline(deviceId, true);
-    }
-    else if (evt === "client.disconnected") {
-      console.log("Device disconnected:", deviceId);
-      await setDeviceOnline(deviceId, false);
-    }
-    else {
-      console.log("Unknown EMQX event:", evt);
+      const updated = await setDeviceOnline(deviceId, true);
+      console.log("[EMQX] connected:", deviceId, "owner:", updated?.owner_id);
+
+      if (updated?.owner_id) {
+        const sent = wsSendToUser(updated.owner_id, {
+          type: "device_status",
+          deviceId: updated.device_id,
+          online: true,
+          lastSeen: updated.last_seen,
+        });
+        console.log("[WS] device_status sent:", sent, "user:", updated.owner_id);
+      }
+    } else if (evt === "client.disconnected") {
+      const updated = await setDeviceOnline(deviceId, false);
+      console.log("[EMQX] disconnected:", deviceId, "owner:", updated?.owner_id);
+
+      if (updated?.owner_id) {
+        const sent = wsSendToUser(updated.owner_id, {
+          type: "device_status",
+          deviceId: updated.device_id,
+          online: false,
+          lastSeen: updated.last_seen,
+        });
+        console.log("[WS] device_status sent:", sent, "user:", updated.owner_id);
+      }
+    } else {
+      // ignore other webhook events
+      // console.log("[EMQX] ignored event:", evt);
     }
 
     res.json({ success: true });
@@ -104,6 +126,7 @@ router.post("/webhook", requireEmqx, async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
+
 
 
 

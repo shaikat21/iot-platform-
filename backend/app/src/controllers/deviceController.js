@@ -5,7 +5,8 @@ import {
   createDevice,
   linkDeviceToUser,
   getDevicesForUser,
-  getDeviceByIdForUser
+  getDeviceByIdForUser,
+  deleteDeviceForUser,
 } from "../models/deviceModel.js";
 import { getUserIdFromRequest } from "../auth/userRoleID.js";
 
@@ -72,6 +73,25 @@ export const getMyDeviceById = async (req, res) => {
     return res.json({ device });
   } catch (err) {
     console.error("[getMyDeviceById] error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteMyDevice = async (req, res) => {
+  try {
+    const userId = getUserIdFromRequest(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const { deviceId } = req.params;
+    const deleted = await deleteDeviceForUser(userId, deviceId);
+
+  if (!deleted) return res.status(404).json({ error: "Device not found" });
+    
+    console.log("[deleteMyDevice] userId=", userId, "deviceId=", deviceId);
+    return res.json({ success: true, deleted });
+
+  } catch (err) {
+    console.error("[deleteMyDevice] error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 };

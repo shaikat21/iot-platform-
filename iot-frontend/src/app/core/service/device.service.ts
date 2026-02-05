@@ -27,11 +27,24 @@ interface TelemetryResponse {
   telemetry: TelemetryRow[];
 }
 
+interface MetricDef {
+  metric_key: string;
+  value_type: 'number' | 'boolean';
+  category: string;
+  unit: string | null;
+}
+
+interface MetricCatalogResponse {
+  categories: string[];
+  metrics: MetricDef[];
+}
+
+
 @Injectable({ providedIn: 'root' })
 export class DeviceService {
   private readonly http = inject(HttpClient);
   private readonly oauth = inject(OAuthService);
-  private readonly baseUrl = environment.api.baseUrl;
+  private readonly baseUrl = `${environment.api.baseUrl}/api`;
 
   private authHeaders(): HttpHeaders {
     const token = this.oauth.getAccessToken();
@@ -72,6 +85,27 @@ getTelemetry(deviceId: string, limit = 50): Observable<TelemetryRow[]> {
       { headers: this.authHeaders() }
     )
     .pipe(map((res) => res.telemetry));
+}
+
+getMetricCatalog(): Observable<MetricCatalogResponse> {
+  return this.http.get<MetricCatalogResponse>(
+    `${this.baseUrl}/metrics`,
+    { headers: this.authHeaders() }
+  );
+}
+
+getMetric(metricKey: string): Observable<MetricDef> {
+  return this.http.get<MetricDef>(
+    `${this.baseUrl}/metrics/${encodeURIComponent(metricKey)}`,
+    { headers: this.authHeaders() }
+  );
+}
+
+deleteDevice(deviceId: string): Observable<{ success: boolean }> {
+  return this.http.delete<{ success: boolean }>(
+    `${this.baseUrl}/devices/${encodeURIComponent(deviceId)}`,
+    { headers: this.authHeaders() }
+  );
 }
 
 }
