@@ -45,16 +45,21 @@ export const insertTelemetry = async ({
 export const getTelemetry = async (deviceId, limit = 100) => {
   const q = `
     SELECT
-      id,
-      device_id,
-      metric,
-      category,
-      unit,
-      qos,
-      topic,
-      value_num,
-      value_bool,
-      timestamp
+      jsonb_strip_nulls(
+        jsonb_build_object(
+          'device_id', device_id,
+          'category', category,
+          'unit', unit,
+          'timestamp', timestamp
+        )
+        ||
+        CASE
+          WHEN category = 'binary'
+            THEN jsonb_build_object('value_bool', value_bool)
+          ELSE
+            jsonb_build_object('value_num', value_num)
+        END
+      ) AS telemetry
     FROM telemetry
     WHERE device_id = $1
     ORDER BY timestamp DESC
@@ -62,5 +67,31 @@ export const getTelemetry = async (deviceId, limit = 100) => {
   `;
 
   const result = await db.query(q, [deviceId, limit]);
-  return result.rows;
+
+  // rows look like: [{ telemetry: {...} }]
+  return result.rows.map(r => r.telemetry);
 };
+
+
+//export const getTelemetry = async (deviceId, limit = 100) => {
+//  const q = `
+//    SELECT
+//      id,
+//      device_id,
+//      metric,
+//      category,
+//      unit,
+//      qos,
+//      topic,
+//      value_num,
+//      value_bool,
+//      timestamp
+//    FROM telemetry
+//    WHERE device_id = $1
+//    ORDER BY timestamp DESC
+//    LIMIT $2
+//  `;
+//
+//  const result = await db.query(q, [deviceId, limit]);
+//  return result.rows;
+//};

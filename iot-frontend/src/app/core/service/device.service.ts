@@ -23,9 +23,6 @@ interface RegisterDeviceResponse {
   device: Device;
 }
 
-interface TelemetryResponse {
-  telemetry: TelemetryRow[];
-}
 
 interface MetricDef {
   metric_key: string;
@@ -78,14 +75,6 @@ listMyDevices(): Observable<Device[]> {
     );
   }
 
-getTelemetry(deviceId: string, limit = 50): Observable<TelemetryRow[]> {
-  return this.http
-    .get<TelemetryResponse>(
-      `${this.baseUrl}/telemetry/${encodeURIComponent(deviceId)}?limit=${limit}`,
-      { headers: this.authHeaders() }
-    )
-    .pipe(map((res) => res.telemetry));
-}
 
 getMetricCatalog(): Observable<MetricCatalogResponse> {
   return this.http.get<MetricCatalogResponse>(
@@ -107,5 +96,32 @@ deleteDevice(deviceId: string): Observable<{ success: boolean }> {
     { headers: this.authHeaders() }
   );
 }
+
+getTelemetry(
+  deviceId: string,
+  arg?: number | { limit?: number; from?: string; to?: string; resolution?: string }
+): Observable<TelemetryRow[]> {
+  const opts =
+    typeof arg === 'number' ? { limit: arg } : (arg ?? {});
+
+  const limit = opts.limit ?? 50;
+
+  const params: string[] = [];
+  params.push(`limit=${encodeURIComponent(String(limit))}`);
+  if (opts.from) params.push(`from=${encodeURIComponent(opts.from)}`);
+  if (opts.to) params.push(`to=${encodeURIComponent(opts.to)}`);
+  if (opts.resolution) params.push(`resolution=${encodeURIComponent(opts.resolution)}`);
+
+  const qs = params.length ? `?${params.join('&')}` : '';
+
+  return this.http
+    .get<{ telemetry: TelemetryRow[] }>(
+      `${this.baseUrl}/telemetry/${encodeURIComponent(deviceId)}${qs}`,
+      { withCredentials: true } // cookie auth
+    )
+    .pipe(map((res) => res.telemetry ?? []));
+}
+
+
 
 }

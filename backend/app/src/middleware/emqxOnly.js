@@ -1,7 +1,7 @@
 import { config } from "../config/env.js";
 
 export function requireEmqx(req, res, next) {
-  const expected = config.emwqx.authSecret;
+  const expected = config.emqx.authSecret;
   if (!expected) return next(); // allow in dev if not set
 
   const got = req.header("x-emqx-secret");

@@ -29,7 +29,7 @@ router.post("/auth", requireEmqx, async (req, res) => {
 
     // 1 BACKEND JWT AUTH
     try {
-      const decoded = jwt.verify(deviceToken, config.emwqx.authSecret);
+      const decoded = jwt.verify(deviceToken, config.emqx.authSecret);
 
       if (decoded?.role === "backend" && decoded?.username === deviceId) {
         return res.json({ result: "allow" });
@@ -78,11 +78,14 @@ router.post("/superuser", (_req, res) => {
 
 
 router.post("/webhook", requireEmqx, async (req, res) => {
+ // console.log("====== EMQX WEBHOOK RAW ======");
+ // console.log(JSON.stringify(req.body, null, 2));
+ // console.log("================================");
   const data = req.body;
 
   try {
     const evt = data.event;
-    const deviceId = data.clientid;
+    const deviceId = data.username;
 
     if (!deviceId) {
       console.warn("[EMQX] webhook missing clientid:", data);

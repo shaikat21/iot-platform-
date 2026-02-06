@@ -4,6 +4,10 @@ import { getUserIdFromRequest } from "../auth/userRoleID.js";
 import { getDeviceByIdForUser } from "../models/deviceModel.js";
 import { insertTelemetry, getTelemetry } from "../models/telemetryModel.js";
 import { publishMessage } from "../services/mqttClient.js";
+import {
+  normalizeResolution,
+  normalizeLimit,
+} from "../utils/dataAggregator.js";
 
 // POST /api/telemetry/:deviceId
 export const pushTelemetry = async (req, res) => {
@@ -29,7 +33,7 @@ export const pushTelemetry = async (req, res) => {
 };
 
 // GET /api/telemetry/:deviceId?limit=50
-export const getDeviceTelemetryHttp = async (req, res) => {
+export const getDeviceTelemetry = async (req, res) => {
   try {
     const { deviceId } = req.params;
     const userId = getUserIdFromRequest(req);

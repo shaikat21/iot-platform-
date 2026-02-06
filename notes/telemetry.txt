@@ -1,0 +1,128 @@
+curl "http://localhost:8086/api/telemetry/DEVICE_ID?limit=100" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+
+  /**
+ * GET /api/telemetry/:deviceId
+ *
+ * Retrieve telemetry for a device owned by the authenticated user.
+ *
+ * Authentication:
+ * - Requires a valid session / token (requireAuth)
+ * - User must have one of: admin, user, developer
+ *
+ * Path params:
+ * - :deviceId (string)
+ *   The device identifier. Must belong to the authenticated user.
+ *
+ * Query params:
+ * - limit (number, optional, default: 50)
+ *   Maximum number of telemetry samples to return.
+ *   - Min: 1
+ *   - Max: 5000
+ *   - If omitted or invalid, defaults to 50.
+ *
+ * - from (string, optional)
+ *   Start of the time range (inclusive).
+ *   Accepted formats:
+ *   - YYYY-MM-DD                     → start of that day (00:00)
+ *   - YYYY-MM-DDTHH:mm[:ss][.sss][Z] → exact timestamp
+ *   - HH:mm[:ss]                     → time only, assumes *today*
+ *
+ * - to (string, optional)
+ *   End of the time range (inclusive).
+ *   Accepted formats:
+ *   - YYYY-MM-DD                     → start of that day (00:00)
+ *   - YYYY-MM-DDTHH:mm[:ss][.sss][Z] → exact timestamp
+ *   - HH:mm[:ss]                     → time only, assumes *today*
+ *
+ *   Notes:
+ *   - If only `to` is provided, results are returned up to that time.
+ *   - If only `from` is provided, results are returned from that time onward.
+ *   - If both `from` and `to` are provided, `from` must be <= `to`.
+ *
+ * - resolution (string, optional, default: "raw")
+ *   Controls aggregation granularity when aggregation is enabled
+ *   by the controller.
+ *
+ *   Supported values:
+ *   - raw   → no aggregation, raw samples (default)
+ *   - 5s    → 5 second buckets
+ *   - 10s   → 10 second buckets
+ *   - 30s   → 30 second buckets
+ *   - 1m    → 1 minute buckets
+ *   - 5m    → 5 minute buckets
+ *   - 15m   → 15 minute buckets
+ *   - 1h    → 1 hour buckets
+ *
+ *   Invalid values fall back to "raw".
+ *
+ * Behavior:
+ * - Query parameters are normalized by `normalizeTelemetryQuery`
+ *   before reaching the controller:
+ *   - `from` / `to` are converted to ISO timestamps (or removed if invalid)
+ *   - `limit` is clamped to a safe range
+ *   - `resolution` is validated using the shared aggregation utilities
+ *
+ * Response:
+ * - 200 OK
+ *   - Raw mode:
+ *     {
+ *       telemetry: [ { ...sample } ]
+ *     }
+ *   - Aggregated mode (when enabled in controller):
+ *     {
+ *       deviceId,
+ *       resolution,
+ *       points,
+ *       data: [ { ...bucket } ]
+ *     }
+ *
+ * - 400 Bad Request
+ *   - Invalid date range or malformed query
+ *
+ * - 401 / 403
+ *   - Not authenticated or not authorized
+ *
+ * - 404 Not Found
+ *   - Device does not exist or is not owned by the user
+ *
+ * - 500 Internal Server Error
+ *   - Unexpected server failure
+ */
+router.get("/:deviceId", normalizeTelemetryQuery, getDeviceTelemetry);
+
+
+Example: time range + aggregation
+curl -X GET \
+  "http://localhost:8086/api/telemetry/DEVICE_123?limit=500&from=2026-02-05T09:00:00Z&to=2026-02-05T12:00:00Z&resolution=1m" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Accept: application/json"
+
+
+Example: time-only range (assumes today)
+curl -X GET \
+  "http://localhost:8086/api/telemetry/DEVICE_123?limit=300&from=09:00&to=11:30&resolution=5m" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Accept: application/json"
+
+
+Example: date-only range
+curl -X GET \
+  "http://localhost:8086/api/telemetry/DEVICE_123?limit=1000&from=2026-02-01&to=2026-02-03&resolution=15m" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Accept: application/json"
+
+
+Example: raw (no aggregation, latest N samples)
+curl -X GET \
+  "http://localhost:8086/api/telemetry/DEVICE_123?limit=50&resolution=raw" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Accept: application/json"
+
+
+Example: only to (everything up to that time today)
+curl -X GET \
+  "http://localhost:8086/api/telemetry/DEVICE_123?limit=200&to=18:00&resolution=1m" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Accept: application/json"

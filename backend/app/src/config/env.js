@@ -44,7 +44,11 @@ export const config = {
     serviceClientSecret2: `${getEnv("ZITADEL_SERVICE_CLIENT_SECRET2")}`,
   },
 
-  emwqx: {
+  device: {
+    mqttSecretPull: getEnv("DEVICE_MQTT_SECRET_PULL"),
+  },
+
+  emqx: {
     authSecret: getEnv("EMQX_AUTH_SECRET"),
   },
 

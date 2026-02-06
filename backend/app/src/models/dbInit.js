@@ -108,14 +108,15 @@ await db.query(`
 
 // ---------- SEED METRIC DEFINITIONS (IDEMPOTENT) ----------
 const defaults = [
-  { key: "temp",        type: "number",  category: "temperature", unit: "°C" },
-  { key: "humidity",    type: "number",  category: "humidity",    unit: "%"  },
-  { key: "water_level", type: "number",  category: "level",       unit: "%"  },
-  { key: "pressure",    type: "number",  category: "pressure",    unit: "kPa"},
-  { key: "battery",     type: "number",  category: "power",       unit: "%"  },
-  { key: "flow",        type: "number",  category: "flow",        unit: "L/min"},
-  { key: "relay",       type: "boolean", category: "binary",      unit: null },
-  { key: "motion",      type: "boolean", category: "binary",      unit: null },
+  { key: "temp",          type: "number",  category: "temperature", unit: "°C" },
+  { key: "humidity",      type: "number",  category: "humidity",    unit: "%"  },
+  { key: "water_level",   type: "number",  category: "level",       unit: "%"  },
+  { key: "pressure",      type: "number",  category: "pressure",    unit: "kPa"},
+  { key: "battery",       type: "number",  category: "power",       unit: "%"  },
+  { key: "flow",          type: "number",  category: "flow",        unit: "L/min"},
+  { key: "relay",         type: "boolean", category: "switch",      unit: null },
+  { key: "motion",        type: "boolean", category: "binary",      unit: null },
+  { key: "binary_sensor", type: "boolean", category: "binary",      unit: null },
 ];
 
 for (const d of defaults) {

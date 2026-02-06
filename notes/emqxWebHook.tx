@@ -1,0 +1,53 @@
+====== EMQX WEBHOOK RAW ======
+{
+  "receive_maximum": 32,
+  "conn_props": {
+    "User-Property": {}
+  },
+  "expiry_interval": 0,
+  "clean_start": true,
+  "mountpoint": "undefined",
+  "is_bridge": false,
+  "connected_at": 1770352770564,
+  "proto_ver": 4,
+  "proto_name": "MQTT",
+  "clientid": "backend-service",
+  "username": "backend-service",
+  "event": "client.connected",
+  "metadata": {
+    "rule_id": "Device_status_WH_D"
+  },
+  "keepalive": 30,
+  "sockname": "192.168.144.4:1883",
+  "peername": "192.168.144.2:38590",
+  "timestamp": 1770352770564,
+  "node": "emqx@emqx"
+}
+================================
+
+====== EMQX WEBHOOK RAW ======
+{
+  "receive_maximum": 32,
+  "conn_props": {
+    "Session-Expiry-Interval": 0,
+    "User-Property": {}
+  },
+  "expiry_interval": 0,
+  "clean_start": true,
+  "mountpoint": "undefined",
+  "is_bridge": false,
+  "connected_at": 1770352714997,
+  "proto_ver": 5,
+  "proto_name": "MQTT",
+  "clientid": "MzI2NTcyNDM0NTM2ODE2ODEzNDQzNTcxNDA4NzQ5ODU0NzC",
+  "username": "123",
+  "event": "client.connected",
+  "metadata": {
+    "rule_id": "Device_status_WH_D"
+  },
+  "keepalive": 60,
+  "sockname": "192.168.144.4:1883",
+  "peername": "192.168.0.179:48202",
+  "timestamp": 1770352714997,
+  "node": "emqx@emqx"
+}

@@ -1,8 +1,8 @@
-// src/app/dashboard/dashboard.ts
+// src/app/interface/Devices/device.ts
 import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DeviceService } from '../core/service/device.service';
-import { Device } from '../models/device.model';
+import { DeviceService } from '../../core/service/device.service';
+import { Device } from '../../models/device.model';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,10 +13,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AddDeviceDialogComponent } from './add-device-dialog';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { Subscription , firstValueFrom} from 'rxjs';
-import { WsService, WsMessage } from '../core/service/ws.service';
+import { WsService, WsMessage } from '../../core/service/ws.service';
 
 @Component({
-  selector: 'app-dashboard',
+  selector: 'app-device-list',
   standalone: true,
   imports: [
     CommonModule,
@@ -28,7 +28,7 @@ import { WsService, WsMessage } from '../core/service/ws.service';
     MatFormFieldModule,
     FormsModule,
   ],
-  templateUrl: './dashboard.html',
+  templateUrl: './device.html',
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private deviceService = inject(DeviceService);

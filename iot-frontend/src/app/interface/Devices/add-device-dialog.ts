@@ -14,7 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatListModule } from '@angular/material/list';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { DeviceService } from '../core/service/device.service';
+import { DeviceService } from '../../core/service/device.service';
 import { CommonModule } from '@angular/common';
 import { MatSelectionListChange } from '@angular/material/list';
 

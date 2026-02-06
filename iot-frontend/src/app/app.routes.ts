@@ -22,22 +22,42 @@ export const routes: Routes = [
       import('./core/auth/signout-callback').then((m) => m.SignoutCallback),
   },
 
-  {
+{
     path: '',
     component: LayoutComponent,
     children: [
       // PUBLIC ROUTES
       { path: '', component: HomeComponent },
 
-      // PROTECTED ROUTES
+      // Protected route group (NO canActivateChild, keep your guard unchanged)
       {
-        path: 'dashboard',
+        path: 'app',
         canActivate: [RoleGuard],
         data: {
-          roles: [UserRoles.ADMIN, UserRoles.DEVELOPER, UserRoles.USER]
+          roles: [UserRoles.ADMIN, UserRoles.DEVELOPER, UserRoles.USER],
         },
-        loadComponent: () =>
-          import('./dashboard/dashboard').then((m) => m.DashboardComponent),
+        children: [
+          {
+            path: 'devices',
+            loadComponent: () =>
+              import('./interface/Devices/device').then((m) => m.DashboardComponent),
+          },
+          {
+            path: 'telemetry',
+            loadComponent: () =>
+              import('./interface/dashboard/telemetry/telemetry').then(
+                (m) => m.TelemetryComponent
+              ),
+          },
+          {
+            path: 'telemetry/:deviceId',
+            loadComponent: () =>
+              import('./interface/dashboard/telemetry/telemetry').then(
+                (m) => m.TelemetryComponent
+              ),
+          },
+          { path: '', pathMatch: 'full', redirectTo: 'devices' },
+        ],
       },
     ],
   },

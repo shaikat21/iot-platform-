@@ -1,5 +1,6 @@
 // src/services/wsServer.js
 import { WebSocketServer } from "ws";
+import { publishMessage } from "./mqttClient.js";
 import { config } from "../config/env.js";
 
 /**
@@ -229,6 +230,89 @@ export function initWs(server, { middlewares = [] } = {}) {
     ws.on("error", (err) => {
       console.warn("[WS] socket error", err?.message || err);
     });
+
+   ws.on("message", async (raw) => {
+  let msg;
+  try {
+    msg = JSON.parse(raw.toString());
+  } catch {
+    return;
+  }
+
+  if (!msg || typeof msg !== "object") return;
+
+  if (msg.type === "cmd_switch") {
+    try {
+      const deviceId = String(msg.deviceId || "").trim();
+      const metric = String(msg.metric || "").trim();
+      const valueBool = msg.valueBool;
+
+      // validate
+      if (!deviceId || !metric || typeof valueBool !== "boolean") return;
+
+      // OPTIONAL SAFETY: only allow relay control
+      // if (metric !== "relay") {
+      //   ws.send(JSON.stringify({ type: "cmd_ack", ok: false, reason: "metric_not_allowed", deviceId, metric }));
+      //   return;
+      // }
+
+      const userId = ws.userId;
+      if (!userId) return;
+
+      // ownership check
+      const device = await getDeviceByIdForUser(userId, deviceId);
+      if (!device) {
+        ws.send(
+          JSON.stringify({
+            type: "cmd_ack",
+            ok: false,
+            reason: "not_owner",
+            deviceId,
+            metric,
+          })
+        );
+        return;
+      }
+
+      // publish command
+      await publishMessage(
+        `cmd/${deviceId}/${metric}`,
+        JSON.stringify({
+          value_bool: valueBool,
+          ts: new Date().toISOString(),
+        })
+      );
+
+      // ack to sender
+      ws.send(
+        JSON.stringify({
+          type: "cmd_ack",
+          ok: true,
+          deviceId,
+          metric,
+          valueBool,
+        })
+      );
+    } catch (e) {
+      console.error("[WS] cmd_switch error:", e);
+      try {
+        ws.send(
+          JSON.stringify({
+            type: "cmd_ack",
+            ok: false,
+            reason: "internal",
+          })
+        );
+      } catch {}
+    }
+
+    return;
+  }
+
+  // other message types can be handled here...
+});
+
+
 
     ws.send(
       JSON.stringify({

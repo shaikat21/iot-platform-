@@ -9,8 +9,10 @@ export interface Device {
 }
 
 export interface TelemetryRow {
-  id: number;
   device_id: string;
-  payload: Record<string, any>;
-  timestamp: string; // ISO timestamp
+  category: string;
+  unit?: string | null;
+  value_num?: number | null;
+  value_bool?: boolean | null;
+  timestamp: string; // ISO
 }
