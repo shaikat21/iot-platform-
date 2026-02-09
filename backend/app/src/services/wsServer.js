@@ -2,6 +2,7 @@
 import { WebSocketServer } from "ws";
 import { publishMessage } from "./mqttClient.js";
 import { config } from "../config/env.js";
+import { getDeviceByIdForUser } from "../models/deviceModel.js";
 
 /**
  * userId -> Set<WebSocket>
@@ -239,6 +240,8 @@ export function initWs(server, { middlewares = [] } = {}) {
     return;
   }
 
+  console.log("[WS] received message from userId:", ws.userId, "message:", msg);
+
   if (!msg || typeof msg !== "object") return;
 
   if (msg.type === "cmd_switch") {
@@ -276,7 +279,7 @@ export function initWs(server, { middlewares = [] } = {}) {
 
       // publish command
       await publishMessage(
-        `cmd/${deviceId}/${metric}`,
+        `tele/${userId}/${metric}`,
         JSON.stringify({
           value_bool: valueBool,
           ts: new Date().toISOString(),

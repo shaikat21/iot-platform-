@@ -1,16 +1,39 @@
 <mat-toolbar color="primary" class="app-toolbar">
-  <span>IoT Platform</span>
+  <div class="toolbar-inner">
+    <!-- Brand -->
+    <a class="brand" routerLink="/" aria-label="IoT Platform Home">
+      <span class="brand-mark">
+        <mat-icon>device_hub</mat-icon>
+      </span>
+      <span class="brand-text">IoT Platform</span>
+    </a>
 
-  <span class="spacer"></span>
+    <span class="spacer"></span>
 
-  @if (!loggedIn) {
-    <button mat-button (click)="login()">Login</button>
-  } @else {
-    <span class="username">{{ userName }}</span>
-    <button mat-button (click)="logout()">Logout</button>
-  }
+    <!-- Right side -->
+    <div class="right">
+      @if (!loggedIn) {
+        <button mat-button class="login-btn" (click)="login()">
+          <mat-icon>login</mat-icon>
+          Login
+        </button>
+        
+      } @else {
+        <div class="user-chip" title="{{ userName }}">
+          <span class="avatar">{{ (userName || 'U').slice(0,1).toUpperCase() }}</span>
+          <span class="username">{{ userName }}</span>
+        </div>
+
+        <button mat-button class="btn btn-ghost" (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          Logout
+        </button>
+      }
+    </div>
+  </div>
 </mat-toolbar>
 
-<router-outlet></router-outlet>
-
+<main class="app-shell">
+  <router-outlet></router-outlet>
+</main>
 

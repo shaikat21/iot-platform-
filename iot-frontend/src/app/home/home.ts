@@ -29,8 +29,19 @@ import { RouterLink } from '@angular/router';
   ],
 
   templateUrl: './home.html',
-  styleUrls: ['./home.css'],
+  styleUrls: ['./home.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 
-export class HomeComponent {}
+export class HomeComponent {
+    consumerDevices = [
+    { icon: 'lightbulb', name: 'Smart Lights' },
+    { icon: 'thermostat', name: 'Thermostat' },
+    { icon: 'security', name: 'Security Cam' },
+    { icon: 'speaker', name: 'Smart Speaker' },
+    { icon: 'kitchen', name: 'Smart Fridge' },
+    { icon: 'local_laundry_service', name: 'Washer' }
+  ];
+
+
+}

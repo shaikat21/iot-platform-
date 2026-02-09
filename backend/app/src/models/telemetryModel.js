@@ -50,7 +50,9 @@ export const getTelemetry = async (deviceId, limit = 100) => {
           'device_id', device_id,
           'category', category,
           'unit', unit,
+          'topic', topic,
           'timestamp', timestamp
+
         )
         ||
         CASE

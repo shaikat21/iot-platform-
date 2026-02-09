@@ -1,13 +1,47 @@
 <div class="home-container">
-  <mat-card class="home-card" appearance="outlined">
-    <h1>IoT Platform</h1>
-    <p>Welcome to your IoT Dashboard. Monitor and manage devices in real-time.</p>
+  <div class="bg" aria-hidden="true">
+    <span class="blob b1"></span>
+    <span class="blob b2"></span>
+    <span class="grid"></span>
+  </div>
 
-    <button mat-raised-button color="primary" routerLink="/app/devices">
-      View Devices
-    </button>
-         <button mat-raised-button color="primary" routerLink="/app/telemetry">
+  <mat-card class="home-card" appearance="outlined">
+    <div class="top-pill">
+      <mat-icon>bolt</mat-icon>
+      <span>Realtime • Secure • Scalable</span>
+    </div>
+
+    <h1 class="title">IoT Platform</h1>
+    <p class="subtitle">
+      Welcome to your IoT dashboard. Monitor devices and telemetry with a clean,
+      real-time experience.
+    </p>
+
+    <div class="action-row">
+      <button mat-raised-button color="primary" class="btn btn-primary" routerLink="/app/devices">
+        <mat-icon>devices</mat-icon>
+        View Devices
+      </button>
+
+      <button mat-raised-button color="primary" class="btn btn-ghost" routerLink="/app/telemetry">
+        <mat-icon>monitoring</mat-icon>
         View Telemetry
-     </button>
+      </button>
+    </div>
+
+    <div class="mini-stats">
+      <div class="stat">
+        <div class="k">Auth</div>
+        <div class="v">OIDC / JWT</div>
+      </div>
+      <div class="stat">
+        <div class="k">Transport</div>
+        <div class="v">MQTT + REST</div>
+      </div>
+      <div class="stat">
+        <div class="k">Mode</div>
+        <div class="v">Live Updates</div>
+      </div>
+    </div>
   </mat-card>
 </div>

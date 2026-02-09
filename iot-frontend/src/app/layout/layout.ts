@@ -3,6 +3,7 @@ import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
 import { AuthService } from '../core/auth/auth.service';
 import { CurrentUser, UserService } from '../core/service/user.service';
 import type { AuthSession } from '../core/auth/auth.types';
@@ -15,7 +16,8 @@ import { Subject, takeUntil } from 'rxjs';
   imports: [
     RouterOutlet,
     MatToolbarModule,
-    MatButtonModule
+    MatButtonModule,
+    MatIcon
   ],
   templateUrl: './layout.html',
   styleUrl: './layout.css'

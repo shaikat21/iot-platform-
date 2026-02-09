@@ -140,7 +140,7 @@ export class TelemetryComponent implements OnInit, OnDestroy {
         ts: new Date().toISOString(),
         valueNum: null,
         valueBool: value,
-        controllable: true,
+        controllable: this.isBinaryCategory(metric),
       });
       this.rebuildViews(this.views().map(v => v.device));
     }
@@ -182,7 +182,7 @@ export class TelemetryComponent implements OnInit, OnDestroy {
     ts,
     valueNum,
     valueBool,
-    controllable: category === 'relay',
+    controllable: this.isBinaryCategory(category),
   });
 
   const deviceList = this.views().map((v) => v.device);
@@ -205,7 +205,11 @@ export class TelemetryComponent implements OnInit, OnDestroy {
 
     for (const [category, list] of grouped.entries()) {
       const kind: 'binary' | 'numeric' =
-        list.some((r) => typeof (r as any).value_bool === 'boolean') ? 'binary' : 'numeric';
+        this.isBinaryCategory(category) ||
+        list.some((r) => typeof (r as any).value_bool === 'boolean')
+          ? 'binary'
+          : 'numeric';
+      
 
       const sorted = list
         .slice()
@@ -223,7 +227,7 @@ export class TelemetryComponent implements OnInit, OnDestroy {
           latestNum: null,
           labels: [],
           values: [],
-          controllable: category === 'relay',
+          controllable: this.isBinaryCategory(category),
         });
       } else {
         let unit: string | null = null;
@@ -357,4 +361,10 @@ export class TelemetryComponent implements OnInit, OnDestroy {
   isBinaryTrue(c: CategoryCard) {
     return c.latestBool === true;
   }
+
+  private isBinaryCategory(category: string): boolean {
+  // hard-pinned binary metrics
+  return category === 'relay' || category === 'switch';
+}
+
 }

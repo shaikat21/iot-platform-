@@ -12,7 +12,7 @@ export function authorize(allowedRoles = []) {
 
     const userRoles = req.auth.roles;
 
-    // Admin bypass
+    // Admin bypass like superuser
     if (userRoles.includes("admin")) return next();
 
     // Role check
