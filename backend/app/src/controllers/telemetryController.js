@@ -39,8 +39,13 @@ export const getDeviceTelemetry = async (req, res) => {
     const limit = Number(req.query.limit ?? 100);
 
     // ✅ normalize + validate resolution
+    
     const resolutionRaw = req.query.resolution;
-    const resolution = resolutionRaw === "snapshot" ? "snapshot" : "raw";
+    const resolution =
+      resolutionRaw === "snapshot" ? "snapshot" :
+      resolutionRaw === "series" ? "series" :
+      "raw";
+
 
     console.log("[getDeviceTelemetry] query.resolution =", resolutionRaw, "=>", resolution);
     console.log("[getDeviceTelemetry] limit =", limit);

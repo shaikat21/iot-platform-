@@ -42,10 +42,14 @@ export class TelemetryChartComponent implements OnChanges, OnDestroy {
           labels: this.labels,
           datasets: [
             {
-              label: this.title,
-              data: this.values,
-              tension: 0.2,
-              pointRadius: 0,
+    label: this.title,
+    data: this.values,
+    borderColor: '#3b82f6',       // 🔵 line color
+    backgroundColor: 'rgba(59,130,246,0.2)', // fill under line
+    borderWidth: 2,
+    tension: 0.35,                 // smooth curve
+    fill: true,
+    pointRadius: 1,                // cleaner look
             },
           ],
         },

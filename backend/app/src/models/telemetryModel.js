@@ -64,7 +64,7 @@ export const getTelemetry = async (deviceId, limit = 100, resolution = "raw") =>
       jsonb_build_object(
         'device_id', device_id,
         'position', position,
-        'metric', metric,         
+        'metric', metric,
         'category', category,
         'unit', unit,
         'topic', topic,
@@ -72,7 +72,7 @@ export const getTelemetry = async (deviceId, limit = 100, resolution = "raw") =>
       )
       ||
       CASE
-        WHEN category = 'binary'
+        WHEN category IN ('binary','switch')
           THEN jsonb_build_object('value_bool', value_bool)
         ELSE
           jsonb_build_object('value_num', value_num)
@@ -93,8 +93,44 @@ export const getTelemetry = async (deviceId, limit = 100, resolution = "raw") =>
       ORDER BY position, metric, timestamp DESC
     `;
     params = [deviceId];
+  } else if (resolution === "series") {
+    // ✅ best: last N numeric points per (position, metric) + latest booleans
+    q = `
+      WITH num AS (
+        SELECT *
+        FROM (
+          SELECT
+            t.*,
+            row_number() OVER (
+              PARTITION BY t.position, t.metric
+              ORDER BY t.timestamp DESC
+            ) AS rn
+          FROM telemetry t
+          WHERE t.device_id = $1
+            AND t.value_num IS NOT NULL
+        ) x
+        WHERE x.rn <= $2
+      ),
+      bin AS (
+        SELECT DISTINCT ON (t.position, t.metric)
+          t.*
+        FROM telemetry t
+        WHERE t.device_id = $1
+          AND t.category IN ('binary','switch')
+          AND t.value_bool IS NOT NULL
+        ORDER BY t.position, t.metric, t.timestamp DESC
+      )
+      SELECT ${baseJson}
+      FROM (
+        SELECT * FROM num
+        UNION ALL
+        SELECT * FROM bin
+      ) u
+      ORDER BY u.position, u.metric, u.timestamp ASC
+    `;
+    params = [deviceId, limit]; // limit = points per metric
   } else {
-    // existing: latest N rows
+    // existing: latest N rows total (kept for debugging)
     q = `
       SELECT
         ${baseJson}
@@ -109,7 +145,6 @@ export const getTelemetry = async (deviceId, limit = 100, resolution = "raw") =>
   const result = await db.query(q, params);
   return result.rows.map((r) => r.telemetry);
 };
-
 
 
 //export const getTelemetry = async (deviceId, limit = 100) => {

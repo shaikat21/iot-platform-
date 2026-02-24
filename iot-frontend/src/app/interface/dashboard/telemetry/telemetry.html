@@ -29,16 +29,22 @@
             <!-- =========================
                  TOP: SMALL TILES (relay + binary_sensor)
                  ========================= -->
+            <!-- =========================
+                 TOP: SMALL TILES (ONE PER POSITION)
+                 Shows ONLINE/OFFLINE always
+                 Shows relay controls if present
+                 Shows binary_sensor state if present
+                 ========================= -->
             <div class="cards-grid cards-grid--binary">
               <ng-container *ngFor="let c of v.cards; trackBy: trackByTile">
                 <mat-card
                   class="metric-card metric-card--binary"
-                  *ngIf="c.kind === 'sensor' || c.kind === 'relay'"
+                  *ngIf="c.kind === 'position'"
                 >
                   <mat-card-header>
                     <mat-card-title>
                       {{ prettyLabel(c.position) }}
-
+            
                       <!-- status pill only (no separate card) -->
                       <span
                         class="status-pill"
@@ -48,22 +54,15 @@
                         {{ c.online === true ? 'ONLINE' : 'OFFLINE' }}
                       </span>
                     </mat-card-title>
-
-                    <mat-card-subtitle
-                      *ngIf="(c.kind === 'sensor' && c.sensorTs) || (c.kind === 'relay' && c.relayTs)"
-                    >
-                      Last:
-                      {{
-                        formatHumanTime(
-                          c.kind === 'sensor' ? c.sensorTs : c.relayTs
-                        )
-                      }}
+            
+                    <mat-card-subtitle *ngIf="c.onlineTs">
+                      Last: {{ formatHumanTime(c.onlineTs) }}
                     </mat-card-subtitle>
                   </mat-card-header>
-
+            
                   <mat-card-content>
-                    <!-- binary_sensor tile -->
-                    <div class="binary-row" *ngIf="c.kind === 'sensor'">
+                    <!-- binary_sensor state (if exists) -->
+                    <div class="binary-row" *ngIf="c.sensor !== null">
                       <button
                         mat-raised-button
                         [color]="c.sensor === true ? 'primary' : 'warn'"
@@ -71,29 +70,33 @@
                         {{ c.sensor === true ? 'ON' : 'OFF' }}
                       </button>
                     </div>
-
-                    <!-- relay/switch tile (controllable) -->
-                    <div class="binary-controls" *ngIf="c.kind === 'relay'">
+            
+                    <!-- relay/switch controls (if exists) -->
+                    <div class="binary-controls" *ngIf="c.controllable && c.relayMetric">
                       <button
                         mat-stroked-button
-                        color="primary"
-                        (click)="setSwitch(v.device.device_id, c.position, c.relayMetric, true)"
+                        [color]="(c.relay === true) ? 'primary' : undefined"
+                        [class.btn-on-active]="c.relay === true"
+                        (click)="setSwitch(v.device.device_id, c.position, c.relayMetric!, true)"
                       >
                         ON
                       </button>
-
+                    
                       <button
                         mat-stroked-button
-                        color="warn"
-                        (click)="setSwitch(v.device.device_id, c.position, c.relayMetric, false)"
+                        [color]="(c.relay === false || c.relay === null) ? 'warn' : undefined"
+                        [class.btn-off-active]="(c.relay === false || c.relay === null)"
+                        (click)="setSwitch(v.device.device_id, c.position, c.relayMetric!, false)"
                       >
                         OFF
                       </button>
                     </div>
+                    
                   </mat-card-content>
                 </mat-card>
               </ng-container>
             </div>
+
 
             <!-- =========================
                  BOTTOM: NUMERIC TILES (each numeric metric is its own chart card)

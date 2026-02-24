@@ -63,7 +63,11 @@ export const initMqtt = async () => {
   });
 
   client.on("message", async (topic, payload, packet) => {
-  if (topic.startsWith("cmd/")) return;
+  if (topic.startsWith("cmd/")) {
+  console.log("[MQTT] cmd ignored:", topic);
+  return;
+  }
+
   let value;
 
   try {

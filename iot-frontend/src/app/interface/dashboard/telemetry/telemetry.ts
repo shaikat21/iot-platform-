@@ -69,39 +69,32 @@ type PositionCard = {
 type TileCard =
   | {
       key: string;
+      kind: 'position';
       position: string;
 
-      // status pill only
       online: boolean | null;
       onlineTs: string | null;
 
-      kind: 'sensor';
+      // optional sensor inside same tile
       sensor: boolean | null;
       sensorTs: string | null;
-    }
-  | {
-      key: string;
-      position: string;
 
-      online: boolean | null;
-      onlineTs: string | null;
-
-      kind: 'relay';
+      // optional relay inside same tile
       relay: boolean | null;
       relayTs: string | null;
-      relayMetric: string; // "relay" | "switch" | etc
+      relayMetric: string | null;
       controllable: boolean;
     }
   | {
       key: string;
+      kind: 'numeric';
       position: string;
-
       online: boolean | null;
       onlineTs: string | null;
-
-      kind: 'numeric';
-      numeric: NumericItem; // includes labels/values/unit/latestNum
+      numeric: NumericItem;
     };
+
+
 
 type DeviceTelemetryView = {
   device: Device;
@@ -191,50 +184,81 @@ private cardKeyFromRow(r: TelemetryRow): string {
 
 
 
-  private loadAllDevicesAndTelemetry(): void {
-    this.loading.set(true);
+private upsertNumericOnlyIntoCache(deviceId: string, rows: TelemetryRow[]): void {
+  const numeric = (rows ?? []).filter(r => typeof (r as any).value_num === 'number');
+  if (!numeric.length) return;
+  this.upsertRowsIntoCache(deviceId, numeric);
+}
 
-    this.deviceService.listMyDevices().subscribe({
-      next: (devices) => {
-        const list = devices ?? [];
-        if (!list.length) {
-          this.views.set([]);
-          this.loading.set(false);
-          return;
-        }
 
-        // fetch initial telemetry for each device (raw latest N)
-        const calls = list.map((d) =>
-          this.deviceService.getTelemetry(d.device_id, { limit: 50, resolution: 'snapshot' }).pipe(
-            catchError((err) => {
-              console.error('[Telemetry] getTelemetry failed for', d.device_id, err);
-              return of([] as TelemetryRow[]);
-            }),
-            map((rows) => ({ device: d, rows }))
-          )
-        );
+private loadAllDevicesAndTelemetry(): void {
+  this.loading.set(true);
 
-        forkJoin(calls).subscribe({
-          next: (results) => {
-            // build cache + view
-            for (const r of results) {
-              this.upsertRowsIntoCache(r.device.device_id, r.rows);
-            }
-            this.rebuildViews(list);
-            this.loading.set(false);
-          },
-          error: (err) => {
-            console.error('Failed to load telemetry', err);
-            this.loading.set(false);
-          },
-        });
-      },
-      error: (err) => {
-        console.error('Failed to load devices', err);
+  this.deviceService.listMyDevices().subscribe({
+    next: (devices) => {
+      const list = devices ?? [];
+      if (!list.length) {
+        this.views.set([]);
         this.loading.set(false);
-      },
-    });
-  }
+        return;
+      }
+
+      // Phase 1: snapshot (fast status + binary + relay)
+      const calls = list.map((d) =>
+        this.deviceService.getTelemetry(d.device_id, { limit: 250, resolution: 'snapshot' }).pipe(
+          catchError((err) => {
+            console.error('[Telemetry] getTelemetry failed for', d.device_id, err);
+            return of([] as TelemetryRow[]);
+          }),
+          map((rows) => ({ device: d, rows }))
+        )
+      );
+
+      forkJoin(calls).subscribe({
+        next: (results) => {
+          for (const r of results) {
+            this.upsertRowsIntoCache(r.device.device_id, r.rows);
+          }
+
+          this.rebuildViews(list);
+          this.loading.set(false);
+
+          // Phase 2: series (numeric history only)
+          const seriesCalls = list.map((d) =>
+            this.deviceService.getTelemetry(d.device_id, { limit: 60, resolution: 'series' }).pipe(
+              catchError((err) => {
+                console.error('[Telemetry] series failed for', d.device_id, err);
+                return of([] as TelemetryRow[]);
+              }),
+              map((rows) => ({ device: d, rows }))
+            )
+          );
+
+          forkJoin(seriesCalls).subscribe({
+            next: (seriesResults) => {
+              for (const r of seriesResults) {
+                this.upsertNumericOnlyIntoCache(r.device.device_id, r.rows);
+              }
+              this.rebuildViews(list);
+            },
+            error: (err) => {
+              console.error('Failed to load telemetry series', err);
+            },
+          });
+        },
+        error: (err) => {
+          console.error('Failed to load telemetry snapshot', err);
+          this.loading.set(false);
+        },
+      });
+    },
+    error: (err) => {
+      console.error('Failed to load devices', err);
+      this.loading.set(false);
+    },
+  });
+}
+
 
 setSwitch(deviceId: string, position: string, metric: string, value: boolean) {
   const ok = this.ws.send({
@@ -557,80 +581,54 @@ private rebuildViews(devices: Device[]): void {
 
     // ✅ FLATTEN into tile cards
     const tiles: TileCard[] = [];
-
+    
     for (const p of byPos.values()) {
-      // small: relay tile
-      if (p.controllable && p.relayMetric) {
-        tiles.push({
-          key: `${p.position}::${p.relayMetric}`,
-          position: p.position,
-          online: p.online,
-          onlineTs: p.onlineTs,
-          kind: 'relay',
-          relay: p.relay,
-          relayTs: p.relayTs,
-          relayMetric: p.relayMetric,
-          controllable: true,
-        });
-      }
-
-      // small: binary_sensor tile
-      if (p.sensor !== null) {
-        tiles.push({
-          key: `${p.position}::binary_sensor`,
-          position: p.position,
-          online: p.online,
-          onlineTs: p.onlineTs,
-          kind: 'sensor',
-          sensor: p.sensor,
-          sensorTs: p.sensorTs,
-        });
-      }
-
-      // big: numeric tiles (each metric becomes its own chart card)
+      // ✅ ONE tile per position always
+      tiles.push({
+        key: `${p.position}::position`,
+        kind: 'position',
+        position: p.position,
+    
+        online: p.online,
+        onlineTs: p.onlineTs,
+    
+        sensor: p.sensor,
+        sensorTs: p.sensorTs,
+    
+        relay: p.relay,
+        relayTs: p.relayTs,
+        relayMetric: p.relayMetric,
+        controllable: p.controllable,
+      });
+    
+      // charts remain separate (optional)
       for (const n of p.numerics) {
         tiles.push({
           key: `${p.position}::${n.metric}`,
+          kind: 'numeric',
           position: p.position,
           online: p.online,
           onlineTs: p.onlineTs,
-          kind: 'numeric',
           numeric: n,
         });
       }
     }
 
+
     // ✅ Sort tiles: signal first, then other numerics, then relay/sensor
     tiles.sort((a, b) => {
-      // 1️⃣ Switch / Relay FIRST
-      const aIsSwitch = a.kind === 'relay' ? 1 : 0;
-      const bIsSwitch = b.kind === 'relay' ? 1 : 0;
-      if (aIsSwitch !== bIsSwitch) {
-        return bIsSwitch - aIsSwitch;
-      }
+      const rank = (t: TileCard) => (t.kind === 'position' ? 0 : 1);
+      const r = rank(a) - rank(b);
+      if (r) return r;
     
-      // 2️⃣ Then numeric (charts)
-      const aIsNumeric = a.kind === 'numeric' ? 1 : 0;
-      const bIsNumeric = b.kind === 'numeric' ? 1 : 0;
-      if (aIsNumeric !== bIsNumeric) {
-        return bIsNumeric - aIsNumeric;
-      }
-    
-      // 3️⃣ Then binary sensor
-      const aIsSensor = a.kind === 'sensor' ? 1 : 0;
-      const bIsSensor = b.kind === 'sensor' ? 1 : 0;
-      if (aIsSensor !== bIsSensor) {
-        return bIsSensor - aIsSensor;
-      }
-    
-      // 4️⃣ Fallback alphabetical by position
       const posCmp = a.position.localeCompare(b.position);
       if (posCmp) return posCmp;
     
       return a.key.localeCompare(b.key);
     });
-
-
+    
+    
+    
     out.push({ device: d, cards: tiles });
   }
 
