@@ -6,15 +6,17 @@
 export function normalizeResolution(
   resolution,
   fallback = "5m",
-  allowed = ["raw", "5s", "10s", "30s", "1m", "5m", "15m", "1h"]
+  allowed = ["raw", "snapshot", "5s", "10s", "30s", "1m", "5m", "15m", "1h"] // ✅ add snapshot
 ) {
   const r = String(resolution || fallback).toLowerCase();
   return allowed.includes(r) ? r : fallback;
 }
 
+
 export function resolutionToBucketMs(resolution, fallback = "5m") {
   const r = String(resolution || fallback).toLowerCase();
   if (r === "raw") return "raw";
+  if (r === "snapshot") return "snapshot";
   if (r === "5s") return 5_000;
   if (r === "10s") return 10_000;
   if (r === "30s") return 30_000;
@@ -89,6 +91,15 @@ export async function aggregateTimeseries({
   if (bucketMs === "raw") {
     return {
       resolution: "raw",
+      points: filtered.length,
+      data: filtered,
+    };
+  }
+
+    // SNAPSHOT passthrough (caller handles latest-per-key query)
+  if (bucketMs === "snapshot") {
+    return {
+      resolution: "snapshot",
       points: filtered.length,
       data: filtered,
     };

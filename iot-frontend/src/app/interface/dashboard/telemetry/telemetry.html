@@ -10,10 +10,7 @@
   </div>
 
   <div *ngIf="!loading() && hasAny()">
-    <div
-      class="device-grid-item"
-      *ngFor="let v of views(); trackBy: trackByDevice"
-    >
+    <div class="device-grid-item" *ngFor="let v of views(); trackBy: trackByDevice">
       <mat-card>
         <mat-card-header>
           <mat-card-title>
@@ -30,58 +27,68 @@
 
           <div *ngIf="v.cards.length > 0">
             <!-- =========================
-                 TOP: ALL BINARY CARDS
+                 TOP: SMALL TILES (relay + binary_sensor)
                  ========================= -->
             <div class="cards-grid cards-grid--binary">
-              <ng-container *ngFor="let c of v.cards; trackBy: trackByCategory">
+              <ng-container *ngFor="let c of v.cards; trackBy: trackByTile">
                 <mat-card
                   class="metric-card metric-card--binary"
-                  *ngIf="c.kind === 'binary'"
+                  *ngIf="c.kind === 'sensor' || c.kind === 'relay'"
                 >
                   <mat-card-header>
                     <mat-card-title>
-                      <mat-icon>toggle_on</mat-icon>
-                      {{ c.category }}
-                      <span *ngIf="c.unit">({{ c.unit }})</span>
+                      {{ prettyLabel(c.position) }}
+
+                      <!-- status pill only (no separate card) -->
+                      <span
+                        class="status-pill"
+                        [class.status-pill--on]="c.online === true"
+                        [class.status-pill--off]="c.online !== true"
+                      >
+                        {{ c.online === true ? 'ONLINE' : 'OFFLINE' }}
+                      </span>
                     </mat-card-title>
-                    <mat-card-subtitle *ngIf="c.latestTs">
-                      Last: {{ c.latestTs }}
+
+                    <mat-card-subtitle
+                      *ngIf="(c.kind === 'sensor' && c.sensorTs) || (c.kind === 'relay' && c.relayTs)"
+                    >
+                      Last:
+                      {{
+                        formatHumanTime(
+                          c.kind === 'sensor' ? c.sensorTs : c.relayTs
+                        )
+                      }}
                     </mat-card-subtitle>
                   </mat-card-header>
 
                   <mat-card-content>
-                    <div class="binary-row">
-                      <!-- Read-only state -->
+                    <!-- binary_sensor tile -->
+                    <div class="binary-row" *ngIf="c.kind === 'sensor'">
                       <button
                         mat-raised-button
-                        [color]="isBinaryTrue(c) ? 'primary' : 'warn'"
+                        [color]="c.sensor === true ? 'primary' : 'warn'"
                       >
-                        {{ isBinaryTrue(c) ? 'ON' : 'OFF' }}
+                        {{ c.sensor === true ? 'ON' : 'OFF' }}
+                      </button>
+                    </div>
+
+                    <!-- relay/switch tile (controllable) -->
+                    <div class="binary-controls" *ngIf="c.kind === 'relay'">
+                      <button
+                        mat-stroked-button
+                        color="primary"
+                        (click)="setSwitch(v.device.device_id, c.position, c.relayMetric, true)"
+                      >
+                        ON
                       </button>
 
-                      <!-- Normal boolean: no input -->
-                      <div *ngIf="!c.controllable" class="binary-hint">
-                        Live only
-                      </div>
-
-                      <!-- ✅ Relay/switch: controllable -->
-                      <div *ngIf="c.controllable" class="binary-controls">
-                        <button
-                          mat-stroked-button
-                          color="primary"
-                          (click)="setSwitch(v.device.device_id, c.category, true)"
-                        >
-                          ON
-                        </button>
-
-                        <button
-                          mat-stroked-button
-                          color="warn"
-                          (click)="setSwitch(v.device.device_id, c.category, false)"
-                        >
-                          OFF
-                        </button>
-                      </div>
+                      <button
+                        mat-stroked-button
+                        color="warn"
+                        (click)="setSwitch(v.device.device_id, c.position, c.relayMetric, false)"
+                      >
+                        OFF
+                      </button>
                     </div>
                   </mat-card-content>
                 </mat-card>
@@ -89,22 +96,20 @@
             </div>
 
             <!-- =========================
-                 BOTTOM: ALL NUMERIC CARDS
+                 BOTTOM: NUMERIC TILES (each numeric metric is its own chart card)
                  ========================= -->
             <div class="cards-grid cards-grid--numeric">
-              <ng-container *ngFor="let c of v.cards; trackBy: trackByCategory">
-                <mat-card
-                  class="metric-card metric-card--numeric"
-                  *ngIf="c.kind === 'numeric'"
-                >
+              <ng-container *ngFor="let c of v.cards; trackBy: trackByTile">
+                <mat-card class="metric-card metric-card--numeric" *ngIf="c.kind === 'numeric'">
                   <mat-card-header>
                     <mat-card-title>
                       <mat-icon>show_chart</mat-icon>
-                      {{ c.category }}
-                      <span *ngIf="c.unit">({{ c.unit }})</span>
+                      {{ prettyLabel(c.position) }} — {{ prettyLabel(c.numeric.metric) }}
+                      <span *ngIf="c.numeric.unit">({{ c.numeric.unit }})</span>
                     </mat-card-title>
-                    <mat-card-subtitle *ngIf="c.latestTs">
-                      Last: {{ c.latestTs }}
+
+                    <mat-card-subtitle *ngIf="c.numeric.latestTs">
+                      Last: {{ formatHumanTime(c.numeric.latestTs) }}
                     </mat-card-subtitle>
                   </mat-card-header>
 
@@ -115,20 +120,22 @@
 
                       <span class="live-value">
                         Live:
-                        {{ c.latestNum !== null ? c.latestNum : '-' }}
-                        <span *ngIf="c.unit" class="unit">{{ c.unit }}</span>
+                        {{ c.numeric.latestNum !== null ? c.numeric.latestNum : '-' }}
+                        <span *ngIf="c.numeric.unit" class="unit">{{ c.numeric.unit }}</span>
                       </span>
 
-                      <span class="ts">{{ c.latestTs || '' }}</span>
+                      <span class="ts">{{ c.numeric.latestTs || '' }}</span>
                     </div>
 
                     <!-- numeric chart -->
                     <app-telemetry-chart
                       [title]="
-                        c.unit ? (c.category + ' (' + c.unit + ')') : c.category
+                        c.numeric.unit
+                          ? (c.numeric.metric + ' (' + c.numeric.unit + ')')
+                          : c.numeric.metric
                       "
-                      [labels]="c.labels"
-                      [values]="c.values"
+                      [labels]="c.numeric.labels"
+                      [values]="c.numeric.values"
                     />
                   </mat-card-content>
                 </mat-card>

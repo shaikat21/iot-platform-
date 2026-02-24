@@ -42,6 +42,7 @@ await db.query(`
     id SERIAL PRIMARY KEY,
 
     device_id TEXT NOT NULL,
+    position TEXT NULL,          -- east_kitchen, west_store, etc
     metric TEXT NOT NULL,        -- temp, humidity, relay, etc
     category TEXT NULL,          -- temperature, humidity, binary
     unit TEXT NULL,              -- °C, %, cm, etc
@@ -64,9 +65,15 @@ await db.query(`
 `);
 
 await db.query(`
-  CREATE INDEX IF NOT EXISTS idx_telemetry_device_metric_time
-  ON telemetry (device_id, metric, timestamp DESC);
+  CREATE INDEX IF NOT EXISTS idx_telemetry_device_position_time
+  ON telemetry (device_id, position, timestamp DESC);
 `);
+
+await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_telemetry_device_position_metric_time
+  ON telemetry (device_id, position, metric, timestamp DESC);
+`);
+
 
 
   // ---------- METRIC DEFINITIONS ----------
@@ -106,6 +113,69 @@ await db.query(`
 
   console.log("[DB] devices, telemetry, device_events, metric_definitions ensured");
 
+//-------------Manufacturing data, Device serial counter -----------
+
+await db.query(`
+  CREATE TABLE IF NOT EXISTS device_serial_counters (
+    serial_date DATE NOT NULL,
+    lot INTEGER NOT NULL CHECK (lot >= 0 AND lot <= 999),
+    seq INTEGER NOT NULL DEFAULT 0 CHECK (seq >= 0),
+    PRIMARY KEY (serial_date, lot)
+  );
+`);
+
+await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_device_serial_counters_date
+  ON device_serial_counters(serial_date);
+`);
+
+console.log("[DB] devices, telemetry, device_events, metric_definitions, device_serial_counters ensured");
+
+
+//----------- device manufacturing data , serial -----------
+
+await db.query(`
+  CREATE TABLE IF NOT EXISTS manufactured_devices (
+    id BIGSERIAL PRIMARY KEY,
+
+    serial_number TEXT NOT NULL UNIQUE,
+
+    factory CHAR(1) NOT NULL,
+    line CHAR(1) NOT NULL,
+    lot INTEGER NOT NULL CHECK (lot >= 0 AND lot <= 999),
+
+    manufactured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    status TEXT NOT NULL DEFAULT 'NEW',   -- NEW | ASSIGNED | REGISTERED | RMA | VOID
+    assigned_device_id TEXT NULL,         -- your internal device_id when assigned
+    assigned_owner_id TEXT NULL,          -- owner/user when assigned
+
+    notes TEXT NULL,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+  );
+`);
+
+await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_manufactured_devices_status
+  ON manufactured_devices(status);
+`);
+
+await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_manufactured_devices_mfg_time
+  ON manufactured_devices(manufactured_at DESC);
+`);
+
+// --- Add provisioning secret ---
+await db.query(`
+  ALTER TABLE manufactured_devices
+    ADD COLUMN IF NOT EXISTS prov_secret TEXT NULL,
+    ADD COLUMN IF NOT EXISTS provisioned_at TIMESTAMPTZ NULL;
+`);
+
+
+console.log("[DB] devices, telemetry, device_events, metric_definitions, device_serial_counters, manufactured_devices ensured");
+
+
 // ---------- SEED METRIC DEFINITIONS (IDEMPOTENT) ----------
 const defaults = [
   { key: "temp",          type: "number",  category: "temperature", unit: "°C" },
@@ -117,6 +187,8 @@ const defaults = [
   { key: "relay",         type: "boolean", category: "switch",      unit: null },
   { key: "motion",        type: "boolean", category: "binary",      unit: null },
   { key: "binary_sensor", type: "boolean", category: "binary",      unit: null },
+  { key: "signal",        type: "number",  category: "wifi",        unit: "dBm" },
+  { key: "online",        type: "boolean",  category: "binary",        unit: null },
 ];
 
 for (const d of defaults) {

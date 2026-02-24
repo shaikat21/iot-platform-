@@ -29,23 +29,36 @@ export const pushTelemetry = async (req, res) => {
   }
 };
 
-// GET /api/telemetry/:deviceId?limit=50
+// GET /api/telemetry/:deviceId?limit=50&resolution=raw|snapshot
+// GET /api/telemetry/:deviceId?limit=50&resolution=snapshot
 export const getDeviceTelemetry = async (req, res) => {
   try {
     const { deviceId } = req.params;
     const userId = getUserIdFromRequest(req);
-    const limit = Number(req.query.limit) || 50;
+
+    const limit = Number(req.query.limit ?? 100);
+
+    // ✅ normalize + validate resolution
+    const resolutionRaw = req.query.resolution;
+    const resolution = resolutionRaw === "snapshot" ? "snapshot" : "raw";
+
+    console.log("[getDeviceTelemetry] query.resolution =", resolutionRaw, "=>", resolution);
+    console.log("[getDeviceTelemetry] limit =", limit);
 
     const device = await getDeviceByIdForUser(userId, deviceId);
     if (!device) {
       return res.status(404).json({ error: "Device not found or not owned by user" });
     }
 
-    const telemetry = await getTelemetry(deviceId, limit);
+    const telemetry = await getTelemetry(deviceId, limit, resolution);
 
+    res.set("Cache-Control", "no-store");
     return res.json({ telemetry });
   } catch (err) {
     console.error("[getDeviceTelemetryHttp] error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
+

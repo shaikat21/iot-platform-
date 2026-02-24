@@ -64,14 +64,14 @@ listMyDevices(): Observable<Device[]> {
     return this.http.post<RegisterDeviceResponse>(
       `${this.baseUrl}/devices`,
       body,
-      { headers: this.authHeaders() }
+      { withCredentials: true }
     );
   }
 
   getDevice(deviceId: string): Observable<Device> {
     return this.http.get<Device>(
       `${this.baseUrl}/devices/${encodeURIComponent(deviceId)}`,
-      { headers: this.authHeaders() }
+      { withCredentials: true }
     );
   }
 
@@ -79,21 +79,21 @@ listMyDevices(): Observable<Device[]> {
 getMetricCatalog(): Observable<MetricCatalogResponse> {
   return this.http.get<MetricCatalogResponse>(
     `${this.baseUrl}/metrics`,
-    { headers: this.authHeaders() }
+    { withCredentials: true }
   );
 }
 
 getMetric(metricKey: string): Observable<MetricDef> {
   return this.http.get<MetricDef>(
     `${this.baseUrl}/metrics/${encodeURIComponent(metricKey)}`,
-    { headers: this.authHeaders() }
+    { withCredentials: true }
   );
 }
 
 deleteDevice(deviceId: string): Observable<{ success: boolean }> {
   return this.http.delete<{ success: boolean }>(
     `${this.baseUrl}/devices/${encodeURIComponent(deviceId)}`,
-    { headers: this.authHeaders() }
+    { withCredentials: true }
   );
 }
 

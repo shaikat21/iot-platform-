@@ -66,7 +66,7 @@ function normalizeTelemetryQuery(req, res, next) {
     req.query.to = toISO ?? undefined;
 
     //use your aggregation util for these
-    req.query.limit = String(normalizeLimit(q.limit, 50, 1, 5));
+    req.query.limit = String(normalizeLimit(q.limit, 50, 1, 500));
     req.query.resolution = normalizeResolution(q.resolution, "raw");
 
     next();

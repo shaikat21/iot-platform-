@@ -1,0 +1,213 @@
+============================================================
+ENTERPRISE DEVICE SERIAL NUMBER SYSTEM
+Version: 1.1
+Project: IoT Manufacturing Platform
+Author: Sharwar Morshed
+Status: IMPLEMENTED (Backend + DB)
+============================================================
+
+
+1. PURPOSE
+------------------------------------------------------------
+This document defines a scalable, production-ready device serial
+number generation + manufacturing inventory system designed for:
+
+- High-volume manufacturing (100,000+ devices per day per lot)
+- Multiple factories and production lines
+- Anti-duplication safety (atomic counter + UNIQUE constraints)
+- IoT platform integration (manufacturing → registration lifecycle)
+- Optional future cryptographic binding
+
+
+2. SERIAL FORMAT
+------------------------------------------------------------
+Format:
+
+PREFIX-YMDD-FL-LOT-SEQ-C
+
+Example:
+
+MI-6C16-A1-042-01234-X
+
+Notes:
+- YMDD is compact manufacturing date encoding (Base36 year/month + day)
+- FL = Factory + Line
+- LOT = batch/lot identifier
+- SEQ = daily per-lot incrementing sequence
+- C = checksum character
+
+
+3. COMPONENT BREAKDOWN
+------------------------------------------------------------
+
+PREFIX
+- Product / brand identifier
+- Examples: MI, ALARM, ESP
+
+Y (Year Code)
+- Base36 encoded year offset from base year 2020
+- 2020 = 0
+- 2026 = 6
+- 2035 = F
+- Supports through 2055 = Z (offset 35)
+
+M (Month Code)
+- Base36 encoded month number
+- 1–9 = 1–9
+- 10 = A
+- 11 = B
+- 12 = C
+
+DD (Day)
+- Two-digit day (01–31)
+
+FL (Factory + Line)
+- 1 character factory code + 1 character production line code
+- Examples:
+  A1 = Factory A, Line 1
+  B3 = Factory B, Line 3
+
+LOT
+- 3-digit batch number
+- Range: 000–999
+
+SEQ
+- 5-digit daily sequence counter
+- Range: 00001–99999
+- Resets automatically per (serial_date + lot)
+- Capacity: 100,000 per lot per day if you allow 00000–99999,
+  but current implementation starts at 00001 (recommended)
+
+C (Checksum)
+- Single character validation code
+- Generated using SHA1(core) and taking the first hex char, uppercased
+- Purpose: detect tampering / simple fake serials (lightweight)
+
+
+4. CAPACITY
+------------------------------------------------------------
+Per lot per day:
+- 99,999 devices if SEQ starts at 00001
+- 100,000 devices if SEQ allows 00000–99999
+
+With:
+- 3 lots
+- 3 lines
+- 2 factories
+
+Total daily capacity (SEQ 00001–99999):
+99,999 × 3 × 3 × 2 = 1,799,982 devices/day
+
+
+5. DATABASE STRUCTURE
+------------------------------------------------------------
+
+5.1 Serial Counter Table (Atomic Sequence)
+------------------------------------------
+CREATE TABLE IF NOT EXISTS device_serial_counters (
+  serial_date DATE NOT NULL,
+  lot INTEGER NOT NULL CHECK (lot >= 0 AND lot <= 999),
+  seq INTEGER NOT NULL DEFAULT 0 CHECK (seq >= 0),
+  PRIMARY KEY (serial_date, lot)
+);
+
+CREATE INDEX IF NOT EXISTS idx_device_serial_counters_date
+  ON device_serial_counters(serial_date);
+
+Purpose:
+- Atomic sequence generation per day + lot
+- Safe under concurrency across multiple backend instances
+
+Implementation detail:
+- First serial of the day/lot sets seq = 1
+- Next calls increment seq atomically via ON CONFLICT UPDATE
+
+
+5.2 Manufactured Device Inventory Table
+---------------------------------------
+CREATE TABLE IF NOT EXISTS manufactured_devices (
+  id BIGSERIAL PRIMARY KEY,
+
+  serial_number TEXT NOT NULL UNIQUE,
+
+  factory CHAR(1) NOT NULL,
+  line CHAR(1) NOT NULL,
+  lot INTEGER NOT NULL CHECK (lot >= 0 AND lot <= 999),
+
+  manufactured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  status TEXT NOT NULL DEFAULT 'NEW',   -- NEW | ASSIGNED | REGISTERED | RMA | VOID
+  assigned_device_id TEXT NULL,         -- internal device_id when assigned/registered
+  assigned_owner_id TEXT NULL,          -- owner/user when assigned/registered
+
+  notes TEXT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_manufactured_devices_status
+  ON manufactured_devices(status);
+
+CREATE INDEX IF NOT EXISTS idx_manufactured_devices_mfg_time
+  ON manufactured_devices(manufactured_at DESC);
+
+Purpose:
+- Tracks manufactured serials independent of app device registration
+- Enables secure registration flow (only pre-manufactured serials can register)
+- Supports lifecycle statuses + audit metadata
+
+
+6. SERIAL GENERATION RULES (IMPLEMENTED)
+------------------------------------------------------------
+- Serial generation MUST be atomic:
+  INSERT ... ON CONFLICT ... DO UPDATE ... RETURNING seq
+
+- Serial generation MUST include checksum.
+
+- Manufacturing flow:
+  - Generate serial(s)
+  - Insert into manufactured_devices with status = NEW
+
+- Registration flow (recommended):
+  - Device provides serial_number during onboarding
+  - Backend verifies serial exists in manufactured_devices AND status = NEW
+  - Backend assigns/updates:
+      status = REGISTERED (or ASSIGNED then REGISTERED)
+      assigned_device_id, assigned_owner_id
+  - Reject registration if serial not found or status not NEW
+
+
+7. IMPLEMENTATION NOTES (BACKEND)
+------------------------------------------------------------
+- generateEnterpriseSerial() MUST return the final string:
+  return `${core}-${checksum}`;
+
+- ESM Node requires explicit file extensions in imports:
+  import { manufactureBatch } from "../models/manufacturing.model.js";
+
+- Bulk manufacturing:
+  - manufactureBatch() generates serials sequentially (safe)
+  - Inserts all manufactured rows in a single SQL INSERT for speed
+
+
+8. SECURITY NOTES
+------------------------------------------------------------
+- Never generate sequence purely in memory.
+- Always keep UNIQUE(serial_number) on manufactured_devices.
+- Consider also enforcing UNIQUE(serial_number) on devices table if stored there.
+- Checksum validation can be performed before DB lookup for quick rejection.
+
+
+9. FUTURE EXTENSIONS (OPTIONAL)
+------------------------------------------------------------
+- Add server-side checksum validation endpoint
+- Add QR code payload = serial_number
+- Add manufacturing station CLI/API with authentication
+- Stronger anti-clone:
+  - Bind serial to device public key (stored at manufacturing)
+  - Require signed challenge during device registration/auth
+- Add factory/line/lot policy rules (shift-based lot rotation)
+
+
+============================================================
+END OF DOCUMENT
+============================================================

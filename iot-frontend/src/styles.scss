@@ -37,3 +37,20 @@ body {
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+/* remove browser default margin */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* make layout full width */
+app-layout, main.app-shell { 
+width: 100% !important; 
+max-width: none !important; 
+margin: 0 !important; 
+padding: 0 !important;
+ }

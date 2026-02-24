@@ -46,6 +46,7 @@ export const config = {
 
   device: {
     mqttSecretPull: getEnv("DEVICE_MQTT_SECRET_PULL"),
+    deviceBootstrapSecret: getEnv("DEVICE_BOOTSTRAP_SECRET"),
   },
 
   emqx: {

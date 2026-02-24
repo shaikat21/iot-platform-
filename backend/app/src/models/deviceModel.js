@@ -44,6 +44,13 @@ export const getDevicesForUser = async (userId) => {
   return res.rows;
 };
 
+export const getDeviceBySerial = async (serial) => {
+  const q = `SELECT * FROM devices WHERE serial_number = $1 LIMIT 1`;
+  const res = await db.query(q, [serial]);
+  return res.rows[0] || null;
+};
+
+
 export const getDeviceByIdForUser = async (userId, deviceId) => {
   const q = `
     SELECT *

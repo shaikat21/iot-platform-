@@ -20,6 +20,11 @@ const router = express.Router();
  * }
  */
 router.post("/auth", requireEmqx, async (req, res) => {
+  console.log("[EMQX AUTH HIT]", {
+  ip: req.ip,
+  headers: req.headers,
+  body: req.body,
+});
   const { username: deviceId, password: deviceToken } = req.body;
 
   if (!deviceId || !deviceToken) {
@@ -50,18 +55,27 @@ router.post("/auth", requireEmqx, async (req, res) => {
   }
 }
 
-    try {
-    // 2 DEVICE AUTH. 
+  // 2) DEVICE AUTH
+  try {
     const device = await getDeviceById(deviceId);
 
-    if (device && device.device_token === deviceToken) {
-      return res.json({ result: "allow" });
-    }
-
-    // 3 FAIL
+// ✅ check secret (constant-time compare is better, but ok for now)
+  if (device.device_token !== deviceToken) {
     console.log("[EMQX AUTH] Invalid token for:", deviceId);
     return res.json({ result: "deny" });
+  }
 
+  // ✅ allow + attach ownerId into session attrs
+  return res.json({
+    result: "allow",
+    is_superuser: false,
+    client_attrs: {
+      ownerId: device.owner_id, // critical for ACL
+      deviceId,
+      // keep serial if you want for debugging/visibility (not used)
+      serial: device.serial_number ?? null,
+    },
+  });
   } catch (err) {
     console.error("[EMQX AUTH] Error:", err);
     return res.json({ result: "deny" });

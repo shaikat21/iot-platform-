@@ -63,18 +63,22 @@ export const initMqtt = async () => {
   });
 
   client.on("message", async (topic, payload, packet) => {
+  if (topic.startsWith("cmd/")) return;
   let value;
 
   try {
     const raw = payload.toString();
     try { value = JSON.parse(raw); } catch { value = raw; }
 
-    // tele/<deviceId>/<metric>
-    const match = topic.match(/^tele\/([^/]+)\/([^/]+)$/);
+    // tele/<ownerId>/<deviceId>/<position>/<metric>
+    const match = topic.match(/^tele\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/);
     if (!match) return;
+    
+    const ownerId = match[1];
+    const deviceId = match[2];      // WH_Central_Alarm
+    const position = match[3];      // east_kitchen
+    const metric = match[4];        // vibration / online / rssi
 
-    const deviceId = match[1];
-    const metric = match[2];
 
     const def = getMetricDefinition(metric);
     if (!def) {
@@ -84,11 +88,21 @@ export const initMqtt = async () => {
 
     const normalized = def.normalize(value);
 
-    const valueNum = def.type === "number" ? Number(normalized) : null;
-    const valueBool = def.type === "boolean" ? Boolean(normalized) : null;
+    const valueNum =
+    def.type === "number"
+        ? (Number.isFinite(Number(normalized)) ? Number(normalized) : null)
+        : null;
+    
+    const valueBool = def.type === "boolean" ? normalized : null;
+    
+    if (def.type === "boolean" && valueBool === null) {
+      console.warn("[MQTT] Invalid boolean payload:", topic, raw);
+      return;
+    }
 
     await insertTelemetry({
       deviceId,
+      position,         
       metric,
       category: def.category,
       unit: def.unit,
@@ -97,13 +111,13 @@ export const initMqtt = async () => {
       valueNum,
       valueBool,
     });
+    
 
     // LIVE STREAM to dashboard (per-user WS)
-  const ownerId = await getOwnerIdByDeviceId(deviceId);
-  if (ownerId) {
     wsSendToUser(ownerId, {
       type: "telemetry",
       deviceId,
+      position,
       metric,
       category: def.category,
       unit: def.unit,
@@ -113,7 +127,6 @@ export const initMqtt = async () => {
       valueBool: valueBool ?? null,
       ts: Date.now(),
     });
-  }
 
     console.log(
       "[MQTT] saved:",

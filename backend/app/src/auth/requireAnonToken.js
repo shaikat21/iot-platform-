@@ -8,6 +8,12 @@ export function requireAnonToken(req, res, next) {
     return next();
   }
 
+  // Allow device bootstrap
+  if (req.path === "/api/device-bootstrap") {
+    return next();
+  }
+
+
   // Allow anon token mint endpoint ONLY
   if (req.path === "/api/anontoken") {
     return next();

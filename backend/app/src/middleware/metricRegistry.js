@@ -1,15 +1,28 @@
 // src/middleware/metricRegistry.js
 
+// src/middleware/metricRegistry.js
+
 import { db } from "../config/db.js";
 
 const toBool = (v) => {
   if (typeof v === "boolean") return v;
   if (typeof v === "number") return v !== 0;
+
   const s = String(v).trim().toLowerCase();
-  return s === "1" || s === "true" || s === "on" || s === "yes";
+  if (["true", "1", "on", "yes"].includes(s)) return true;
+  if (["false", "0", "off", "no"].includes(s)) return false;
+
+  return null; // unknown/invalid boolean
 };
 
 let REGISTRY = {};
+
+// ✅ Optional fallback metrics (works even if DB table empty)
+const METRIC_DEFINITIONS = {
+  vibration: { type: "boolean", category: "binary", unit: null, normalize: toBool },
+  online: { type: "boolean", category: "status", unit: null, normalize: toBool },
+  rssi: { type: "number", category: "wifi", unit: "dBm", normalize: (v) => Number(v) },
+};
 
 const normalizers = {
   number: (v) => Number(v),
@@ -29,7 +42,7 @@ export async function initMetricRegistry() {
       type: r.value_type,
       category: r.category,
       unit: r.unit,
-      normalize: normalizers[r.value_type],
+      normalize: normalizers[r.value_type] ?? ((x) => x),
     };
   }
 
@@ -37,7 +50,8 @@ export async function initMetricRegistry() {
 }
 
 export function getMetricDefinition(metric) {
-  return REGISTRY[metric] ?? METRIC_DEFINITIONS?.[metric];
+  if (!metric) return null;
+  return REGISTRY[metric] ?? METRIC_DEFINITIONS[metric] ?? null;
 }
 
 export function listMetricDefinitions() {
