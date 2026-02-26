@@ -225,7 +225,7 @@ private loadAllDevicesAndTelemetry(): void {
 
           // Phase 2: series (numeric history only)
           const seriesCalls = list.map((d) =>
-            this.deviceService.getTelemetry(d.device_id, { limit: 60, resolution: 'series' }).pipe(
+            this.deviceService.getTelemetry(d.device_id, { limit: 40, resolution: 'series' }).pipe(
               catchError((err) => {
                 console.error('[Telemetry] series failed for', d.device_id, err);
                 return of([] as TelemetryRow[]);

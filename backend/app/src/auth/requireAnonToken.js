@@ -8,8 +8,8 @@ export function requireAnonToken(req, res, next) {
     return next();
   }
 
-  // Allow device bootstrap
-  if (req.path === "/api/device-bootstrap") {
+  // Allow device provision from device -- device dont have token
+  if (req.path === "/api/devices/provision") {
     return next();
   }
 

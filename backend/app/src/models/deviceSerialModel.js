@@ -1,8 +1,8 @@
 import { db } from "../config/db.js";
 import crypto from "crypto";
-import { config } from "../config/env.js";  
+ 
 
-const BASE36 = config.device.deviceBootstrapSecret;
+const BASE36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 function toBase36(n) {
   if (!Number.isFinite(n) || n < 0 || n >= BASE36.length) {
@@ -35,7 +35,7 @@ export function generateProvisionSecret() {
  * Format: PREFIX-YMDD-FL-LOT-SEQ-C
  * Example: MI-6C16-A1-042-01234-X
  */
-export async function generateEnterpriseSerial(
+export async function generateDeviceSerial(
   factory,
   line,
   lot,
@@ -85,4 +85,14 @@ export async function generateEnterpriseSerial(
 
 const checksum = generateChecksum(core);
   return `${core}-${checksum}`;
+}
+
+export async function generateSerialWithSecret(factory, line, lot, prefix = "MI") {
+  const serial = await generateDeviceSerial(factory, line, lot, prefix);
+  const provSecret = generateProvisionSecret();
+
+  return {
+    serial,
+    prov_secret: provSecret
+  };
 }

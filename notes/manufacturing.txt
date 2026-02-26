@@ -1,0 +1,143 @@
+============================================================
+IoT Manufacturing API Usage Guide
+Project: IoT Backend
+============================================================
+
+BASE URL
+------------------------------------------------------------
+http://192.168.0.104:8086/api/manufacturing
+
+
+AUTHENTICATION
+------------------------------------------------------------
+All endpoints require a valid Bearer token.
+
+Header:
+Authorization: Bearer <ACCESS_TOKEN>
+
+Only roles allowed:
+- admin
+- developer
+
+
+============================================================
+1) CREATE MANUFACTURING BATCH
+============================================================
+
+Endpoint:
+POST /api/manufacturing/batch
+
+Description:
+Creates a new manufacturing batch and generates device
+serial numbers and provisioning secrets.
+
+Headers:
+Content-Type: application/json
+Authorization: Bearer <ACCESS_TOKEN>
+
+Request Body (JSON Example):
+
+{
+  "factory": "A",
+  "line": "1",
+  "lot": 2,
+  "count": 5,
+  "prefix": "MI",
+  "metadata": {
+    "model": "central_alarm"
+  },
+  "notes": "Initial production run"
+}
+
+Field Description:
+
+factory   -> Factory code (string, required)
+line      -> Production line identifier (string, required)
+lot       -> Lot number (integer, required)
+count     -> Number of devices to generate (max 2000)
+prefix    -> Serial prefix (default: MI)
+metadata  -> Optional JSON object
+notes     -> Optional text
+
+Successful Response (201):
+
+{
+  "batch_id": "uuid",
+  "devices": [
+    {
+      "serial_number": "MI-6226-A1-002-00001-5",
+      "prov_secret": "hexstring"
+    }
+  ]
+}
+
+Example cURL:
+
+curl -X POST http://192.168.0.104:8086/api/manufacturing/batch \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+        "factory":"A",
+        "line":"1",
+        "lot":2,
+        "count":5,
+        "prefix":"MI"
+      }'
+
+
+============================================================
+2) DOWNLOAD BATCH CSV
+============================================================
+
+Endpoint:
+GET /api/manufacturing/batch/:id/csv
+
+Example:
+GET /api/manufacturing/batch/019c987e-a664-7849-bcf5-292ea2acb7b1/csv
+
+Description:
+Downloads CSV file containing all devices in the batch.
+
+Headers:
+Authorization: Bearer <ACCESS_TOKEN>
+
+Response:
+Content-Type: text/csv
+Content-Disposition: attachment
+
+CSV Format:
+
+batch_id,serial_number,prov_secret,factory,line,lot,manufactured_at,status
+
+Example cURL:
+
+curl -X GET \
+http://192.168.0.104:8086/api/manufacturing/batch/<batch_id>/csv \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+
+
+============================================================
+ERROR CODES
+============================================================
+
+400 -> Invalid input (UUID, factory, etc.)
+401 -> Unauthorized (invalid or missing token)
+403 -> Forbidden (insufficient role)
+404 -> Batch not found
+500 -> Internal server error
+
+
+============================================================
+SECURITY NOTES
+============================================================
+
+- Do not expose prov_secret in public endpoints.
+- Use HTTPS in production.
+- Ensure serial_number has UNIQUE DB constraint.
+- Consider storing prov_secret_hash instead of raw secret.
+- Limit batch count to prevent abuse.
+- Log batch creation for audit tracking.
+
+============================================================
+END OF DOCUMENT
+============================================================

@@ -1,6 +1,4 @@
-import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { config } from "../config/env.js";
 import {
   createDevice,
   linkDeviceToUser,
@@ -9,6 +7,13 @@ import {
   deleteDeviceForUser,
 } from "../models/deviceModel.js";
 import { getUserIdFromRequest } from "../auth/userRoleID.js";
+
+import {
+  getManufacturedBySerial,
+  claimManufacturedSerialForOwner,
+} from "../models/manufacturingClaimModel.js";
+
+import { releaseManufacturedAssignment } from "../models/manufacturingClaimModel.js";
 
 // Register new device
 export const registerDevice = async (req, res) => {
@@ -20,6 +25,18 @@ export const registerDevice = async (req, res) => {
 
     if (!deviceId || !serialNumber) {
       return res.status(400).json({ error: "deviceId and serialNumber required" });
+    }
+
+       // Manufacturing gate (prevents serial hijack)
+    const m = await getManufacturedBySerial(serialNumber);
+    if (!m) {
+      return res.status(404).json({ error: "Invalid serial number" });
+    }
+    if (m.status !== "NEW") {
+      return res.status(409).json({
+        error: "Serial not available for registration",
+        status: m.status,
+      });
     }
 
     // Auto-generate secure device token
@@ -38,8 +55,30 @@ export const registerDevice = async (req, res) => {
     // Make sure device is linked to user
     await linkDeviceToUser({ userId, deviceId });
 
-    return res.status(201).json({ success: true, device });
-  } catch (err) {
+        //Atomically claim manufactured serial (NEW -> ASSINGED)
+    const claimed = await claimManufacturedSerialForOwner({
+      serialNumber,
+      ownerId: userId,
+      deviceId,
+    });
+    
+    // If someone claimed in between (race), fail safely
+    if (!claimed) {
+      // Optional: cleanup device you just created to avoid orphan rows.
+      // If you have a safe delete-by-id model method, call it here.
+      return res.status(409).json({ error: "Serial already claimed. Try again." });
+    }
+
+    return res.status(201).json({
+     success: true,
+     device,
+     manufacturing: {
+       serial_number: claimed.serial_number,
+       status: claimed.status,
+     },
+   });
+  } 
+  catch (err) {
     console.error("[registerDevice] error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -86,6 +125,15 @@ export const deleteMyDevice = async (req, res) => {
     const deleted = await deleteDeviceForUser(userId, deviceId);
 
   if (!deleted) return res.status(404).json({ error: "Device not found" });
+
+  // ✅ Release manufacturing assignment (ASSIGNED -> NEW)
+    // If nothing matches, do nothing (safe + minimal)
+    try {
+      await releaseManufacturedAssignment({ ownerId: userId, deviceId });
+    } catch (e) {
+      // don't fail delete if manufacturing release fails
+      console.error("[deleteMyDevice] releaseManufacturedAssignment error:", e?.message);
+    }
     
     console.log("[deleteMyDevice] userId=", userId, "deviceId=", deviceId);
     return res.json({ success: true, deleted });

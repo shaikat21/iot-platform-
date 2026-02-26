@@ -20,11 +20,11 @@ const router = express.Router();
  * }
  */
 router.post("/auth", requireEmqx, async (req, res) => {
-  console.log("[EMQX AUTH HIT]", {
-  ip: req.ip,
-  headers: req.headers,
-  body: req.body,
-});
+//  console.log("[EMQX AUTH HIT]", {
+//  ip: req.ip,
+//  headers: req.headers,
+//  body: req.body,
+//});
   const { username: deviceId, password: deviceToken } = req.body;
 
   if (!deviceId || !deviceToken) {

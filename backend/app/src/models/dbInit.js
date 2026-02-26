@@ -169,9 +169,14 @@ await db.query(`
 await db.query(`
   ALTER TABLE manufactured_devices
     ADD COLUMN IF NOT EXISTS prov_secret TEXT NULL,
-    ADD COLUMN IF NOT EXISTS provisioned_at TIMESTAMPTZ NULL;
+    ADD COLUMN IF NOT EXISTS provisioned_at TIMESTAMPTZ NULL,
+    ADD COLUMN IF NOT EXISTS batch_id UUID NULL;
 `);
 
+await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_manufactured_devices_batch_id
+  ON manufactured_devices(batch_id);
+`);
 
 console.log("[DB] devices, telemetry, device_events, metric_definitions, device_serial_counters, manufactured_devices ensured");
 

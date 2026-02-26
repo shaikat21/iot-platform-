@@ -11,13 +11,22 @@ import {
   //issueDeviceToken
 } from "../controllers/deviceController.js";
 
+import { provisionManufacturedDevice } from "../controllers/deviceProvisionController.js";
 
 
 const router = Router();
 
+router.post("/provision", provisionManufacturedDevice);
+
 // All device routes require authentication
 router.use(requireAuth);
 router.use(authorize(["admin", "user", "developer"]));
+
+/**
+ * ✅ AUTH (Dashboard)
+ * POST /devices/claim
+ * body: { serial_number }
+ */
 
 // Register new device and assign owner
 router.post("/", registerDevice);

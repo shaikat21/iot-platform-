@@ -1,0 +1,147 @@
+============================================================ IoT Device
+API Documentation Project: IoT Backend - Device & Manufacturing Flow
+============================================================
+
+BASE URL
+
+http://192.168.0.104:8086/api/devices
+
+============================================================ PUBLIC
+ENDPOINT (NO AUTH REQUIRED)
+============================================================
+
+1) Provision Manufactured Device
+
+POST /devices/provision
+
+Description: Called by ESP device during first boot. Verifies serial +
+provisioning secret. If valid and status is ASSIGNED: - Status becomes
+REGISTERED - Returns owner_id, device_id, device_token
+
+Request Body: { “serial_number”: “MI-6226-A1-002-00001-5”,
+“prov_secret”: “hexstring_from_factory” }
+
+Example cURL:
+
+curl -X POST http://192.168.0.104:8086/api/devices/provision -H
+“Content-Type: application/json” -d ‘{ “serial_number”:
+“MI-6226-A1-002-00001-5”, “prov_secret”: “HEX_SECRET_FROM_CSV” }’
+
+Success Response: { “success”: true, “owner_id”: “348909561249300483”,
+“device_id”: “device_name”, “device_token”:
+“device_token_from_devices_table” }
+
+Failure Responses: 400 -> Missing fields 403 -> Invalid secret OR not in
+ASSIGNED state 404 -> Serial not found 500 -> Internal error
+
+============================================================
+AUTHENTICATED ENDPOINTS (Dashboard)
+============================================================
+
+All routes below require: - Valid Bearer token - Role: admin | user |
+developer
+
+Header Example: Authorization: Bearer
+
+  ------------------------------------------------------------
+  2) Register New Device
+  ------------------------------------------------------------
+  POST /devices
+
+  Description: Registers a manufactured device to logged-in
+  user. State transition: NEW -> ASSIGNED
+
+  Request Body: { “deviceId”: “test_provisioning”, “name”: “My
+  Device”, “serialNumber”: “MI-6226-A1-002-00001-5”,
+  “deviceType”: “sensor”, “metadata”: {} }
+
+  Example cURL:
+
+  curl -X POST http://192.168.0.104:8086/api/devices -H
+  “Content-Type: application/json” -H “Authorization: Bearer ”
+  -d ‘{ “deviceId”: “test_provisioning”, “name”: “My Device”,
+  “serialNumber”: “MI-6226-A1-002-00001-5”, “deviceType”:
+  “sensor”, “metadata”: {} }’
+
+  Response: { “success”: true, “device”: { …device_row } }
+
+  Errors: 404 -> Invalid serial number 409 -> Serial already
+  claimed 401 -> Unauthorized
+  ------------------------------------------------------------
+
+3) List My Devices
+
+GET /devices
+
+Description: Returns all devices owned by authenticated user.
+
+Example cURL:
+
+curl -X GET http://192.168.0.104:8086/api/devices -H “Authorization:
+Bearer ”
+
+Response: { “devices”: [ … ] }
+
+  ------------------------------------------------------------
+  4) Get One Device
+  ------------------------------------------------------------
+  GET /devices/:deviceId
+
+  Example: GET /devices/test_provisioning
+
+  Example cURL:
+
+  curl -X GET
+  http://192.168.0.104:8086/api/devices/test_provisioning -H
+  “Authorization: Bearer ”
+
+  Response: { “device”: { … } }
+
+  Errors: 404 -> Device not found
+  ------------------------------------------------------------
+
+5) Delete Device
+
+DELETE /devices/:deviceId
+
+Description: Deletes device from user’s dashboard. If manufacturing
+status = ASSIGNED: ASSIGNED -> NEW assigned_owner_id = NULL
+assigned_device_id = NULL provisioned_at = NULL (prov_secret remains
+intact)
+
+Example cURL:
+
+curl -X DELETE http://192.168.0.104:8086/api/devices/test_provisioning
+-H “Authorization: Bearer ”
+
+Response: { “success”: true, “deleted”: true }
+
+Errors: 404 -> Device not found 401 -> Unauthorized
+
+============================================================ DEVICE
+STATE MACHINE
+============================================================
+
+Manufacturing: NEW
+
+User Registers Device: NEW -> ASSIGNED
+
+ESP Provisions: ASSIGNED -> REGISTERED
+
+User Deletes Before Provision: ASSIGNED -> NEW
+
+REGISTERED devices cannot be re-provisioned unless manually reset.
+
+============================================================ SECURITY
+NOTES ============================================================
+
+-   Provision endpoint requires serial + prov_secret.
+-   Provision works only once.
+-   Dashboard routes require JWT authentication.
+-   Device token is returned only during provisioning.
+-   Consider rate limiting /provision in production.
+-   Never log prov_secret or device_token.
+
+============================================================ END OF
+DOCUMENT ============================================================
+

@@ -9,7 +9,7 @@ import sessionRoutes from "./sessionRoutes.js";
 import cookieRoutes from "./cookieRoutes.js";
 import anonCookieRoutes from "./anonCookieRoutes.js";
 import metricDefinationRoutes from "./metricDefinationRoutes.js";
-import deviceBootstrapRoutes from "./deviceBootstrapRoutes.js"
+import manufacturingRoutes from "./manufacturingRoutes.js";
 
 
 const router = Router();
@@ -24,7 +24,8 @@ router.use("/session", sessionRoutes);
 router.use("/cookie", cookieRoutes);
 router.use("/anon-cookie", anonCookieRoutes);
 router.use("/metrics", metricDefinationRoutes);
-router.use("/device-bootstrap", deviceBootstrapRoutes);
+router.use("/manufacturing", manufacturingRoutes);
+
 
 
 
