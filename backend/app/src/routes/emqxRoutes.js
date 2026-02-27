@@ -55,7 +55,7 @@ router.post("/auth", requireEmqx, async (req, res) => {
   }
 }
 
-  // 2) DEVICE AUTH
+  // 2) DEVICE AUTH , need to fix , breaking if wrong device id 
   try {
     const device = await getDeviceById(deviceId);
 

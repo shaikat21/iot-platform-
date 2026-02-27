@@ -92,7 +92,7 @@ export const releaseManufacturedAssignment = async ({ ownerId, deviceId }) => {
         provisioned_at = NULL
     WHERE assigned_owner_id = $1
       AND assigned_device_id = $2
-      AND status = 'ASSIGNED'
+      AND status IN ('ASSIGNED', 'REGISTERED')
     RETURNING serial_number, status
   `;
   const r = await db.query(q, [ownerId, deviceId]);
