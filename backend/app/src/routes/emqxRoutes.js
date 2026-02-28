@@ -7,6 +7,7 @@ import { setDeviceOnline } from "../models/deviceModel.js";
 import { config } from "../config/env.js";
 import { requireEmqx } from "../middleware/emqxOnly.js";
 import { wsSendToUser } from "../services/wsServer.js";
+import { emqxAuthController } from "../controllers/emqxAuthController.js";
 
 const router = express.Router();
 
@@ -19,68 +20,7 @@ const router = express.Router();
  *   "password": "<deviceToken>"
  * }
  */
-router.post("/auth", requireEmqx, async (req, res) => {
-//  console.log("[EMQX AUTH HIT]", {
-//  ip: req.ip,
-//  headers: req.headers,
-//  body: req.body,
-//});
-  const { username: deviceId, password: deviceToken } = req.body;
-
-  if (!deviceId || !deviceToken) {
-    console.log("[EMQX AUTH] Missing username/password");
-    return res.json({ result: "deny" });
-  }
-
-    // 1 BACKEND JWT AUTH
-    try {
-      const decoded = jwt.verify(deviceToken, config.emqx.authSecret);
-
-      if (decoded?.role === "backend" && decoded?.username === deviceId) {
-        return res.json({ result: "allow" });
-      }
-      // JWT valid but not backend identity
-    console.warn("[EMQX AUTH] Valid JWT but not backend:", {
-    deviceId,
-    role: decoded?.role,
-    });
-
-  } catch (err) {
-  // Only log *non-noise* cases
-  if (err.name !== "TokenExpiredError") {
-    console.warn("[EMQX AUTH] Invalid backend JWT:", {
-      deviceId,
-      reason: err.name,
-    });
-  }
-}
-
-  // 2) DEVICE AUTH , need to fix , breaking if wrong device id 
-  try {
-    const device = await getDeviceById(deviceId);
-
-// ✅ check secret (constant-time compare is better, but ok for now)
-  if (device.device_token !== deviceToken) {
-    console.log("[EMQX AUTH] Invalid token for:", deviceId);
-    return res.json({ result: "deny" });
-  }
-
-  // ✅ allow + attach ownerId into session attrs
-  return res.json({
-    result: "allow",
-    is_superuser: false,
-    client_attrs: {
-      ownerId: device.owner_id, // critical for ACL
-      deviceId,
-      // keep serial if you want for debugging/visibility (not used)
-      serial: device.serial_number ?? null,
-    },
-  });
-  } catch (err) {
-    console.error("[EMQX AUTH] Error:", err);
-    return res.json({ result: "deny" });
-  }
-});
+router.post("/auth", requireEmqx, emqxAuthController);
 
 
 /**

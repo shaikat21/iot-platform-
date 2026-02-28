@@ -28,11 +28,56 @@ export const createDevice = async (data) => {
 /**
  * Get a device by its ID.
  */
-export const getDeviceById = async (deviceId) => {
-  const q = `SELECT * FROM devices WHERE device_id = $1 LIMIT 1`;
-  const result = await db.query(q, [deviceId]);
-  return result.rows[0];
-};
+export async function getDeviceById(deviceId) {
+  const id = String(deviceId || "").trim();
+  if (!id) return null;
+
+  const r = await db.query(
+    `SELECT device_id, owner_id, device_token, serial_number, device_type, metadata, online, last_seen, created_at, updated_at
+     FROM devices
+     WHERE device_id = $1
+     LIMIT 1`,
+    [id]
+  );
+
+  return r.rows[0] || null;
+}
+
+/**
+ * On successful device auth:
+ * - If status=ASSIGNED and last_seen is NULL -> promote to REGISTERED + set registered_at
+ * - Always update last_seen
+ * Returns the updated row (minimal fields), or null if id not found.
+ */
+export async function promoteDeviceProvisioningStatus(deviceId) {
+  const id = String(deviceId || "").trim();
+  if (!id) return false;
+
+  const r = await db.query(
+    `
+    WITH first_seen AS (
+      SELECT last_seen
+      FROM devices
+      WHERE device_id = $1
+      LIMIT 1
+    ),
+    promoted AS (
+      UPDATE manufactured_devices md
+      SET
+        status = 'REGISTERED',
+        provisioned_at = COALESCE(md.provisioned_at, NOW())
+      WHERE md.assigned_device_id = $1
+        AND md.status = 'ASSIGNED'
+        AND EXISTS (SELECT 1 FROM first_seen fs WHERE fs.last_seen IS NULL)
+      RETURNING 1
+    )
+    SELECT EXISTS(SELECT 1 FROM promoted) AS promoted;
+    `,
+    [id]
+  );
+
+  return !!r.rows[0]?.promoted;
+}
 
 export const getDevicesForUser = async (userId) => {
   const q = `
@@ -58,7 +103,7 @@ export const getDeviceByIdForUser = async (userId, deviceId) => {
     WHERE owner_id = $1 AND device_id = $2
     LIMIT 1`;
   const res = await db.query(q, [userId, deviceId]);
-  return res.rows[0];
+  return res.rows[0] || null;
 };
 
 export const linkDeviceToUser = async ({ userId, deviceDbId, deviceId }) => {
