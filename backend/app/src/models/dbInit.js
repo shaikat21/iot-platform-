@@ -35,6 +35,15 @@ export const initTables = async () => {
     ON devices(last_seen);
   `);
 
+  await db.query(`
+    ALTER TABLE devices
+    ADD COLUMN IF NOT EXISTS sw_version VARCHAR(32);
+  `);
+
+  await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_devices_sw_version
+  ON devices(sw_version);
+`);
 
 // ---------- TELEMETRY ----------
 await db.query(`
@@ -176,6 +185,16 @@ await db.query(`
 await db.query(`
   CREATE INDEX IF NOT EXISTS idx_manufactured_devices_batch_id
   ON manufactured_devices(batch_id);
+`);
+
+await db.query(`
+  ALTER TABLE manufactured_devices
+  ADD COLUMN IF NOT EXISTS hw_version VARCHAR(32) NOT NULL DEFAULT '1.0.0';
+`);
+
+await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_manufactured_devices_hw_version
+  ON manufactured_devices(hw_version);
 `);
 
 console.log("[DB] devices, telemetry, device_events, metric_definitions, device_serial_counters, manufactured_devices ensured");

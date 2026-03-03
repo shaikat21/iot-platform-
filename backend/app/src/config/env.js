@@ -53,5 +53,13 @@ export const config = {
     authSecret: getEnv("EMQX_AUTH_SECRET"),
   },
 
+  r2: {
+    endpoint: getEnv("R2_ENDPOINT"),            // ex: https://<accountid>.r2.cloudflarestorage.com
+    accessKeyId: getEnv("R2_ACCESS_KEY_ID"),
+    secretAccessKey: getEnv("R2_SECRET_ACCESS_KEY"),
+    bucket: getEnv("R2_BUCKET_NAME"),
+    //publicBaseUrl: getEnv("R2_PUBLIC_BASE_URL", ""), // optional (only if you also serve public URLs)
+  },
+
   corsOrigins: getEnv("CORS_ORIGINS", "").split(",").filter(Boolean)
 };
