@@ -1,0 +1,264 @@
+esphome:
+  name: iot-test
+  friendly_name: iot_test
+  on_boot:
+    priority: 600
+    then:
+      - lambda: |-
+          // write once, then it persists in NVS across reboots + OTA
+          if (id(device_serial).empty()) id(device_serial) = std::string("${FACTORY_DEVICE_SERIAL}");
+          if (id(prov_secret).empty())  id(prov_secret)  = std::string("${FACTORY_PROV_SECRET}");
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+
+preferences:
+  flash_write_interval: 0s
+
+
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  reboot_timeout: 0s
+  encryption:
+    key: "++UWH5VtW80SBIjaEancMjPcnvSr/XWh1dqldkHB9mA="
+
+ota:
+  - platform: esphome
+    password: "6f1a968f67a45b20d7ecaf8cfc080e4c"
+  - platform: http_request
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  on_connect:
+    then:
+      - if:
+          condition:
+            lambda: 'return id(device_id).empty() || id(mqtt_token).empty();'
+          then:
+            - script.execute: provision_device
+          else:
+            - script.execute: enable_mqtt_from_global
+
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Iot-Test Fallback Hotspot"
+    password: "pass1234"
+
+captive_portal:
+    
+http_request:
+  useragent: iot-device-provision
+  timeout: 10s
+
+globals:
+  # factory-injected (unique)
+  - id: device_serial
+    type: std::string
+    restore_value: yes
+    initial_value: ""
+    max_restore_data_length: 64
+
+  - id: prov_secret
+    type: std::string
+    restore_value: yes
+    initial_value: ""
+    max_restore_data_length: 128
+
+ # From Backend
+  - id: device_id
+    type: std::string
+    restore_value: yes
+    initial_value: ""
+    max_restore_data_length: 64
+
+  - id: mqtt_token
+    type: std::string
+    restore_value: yes
+    initial_value: ""
+    max_restore_data_length: 128
+
+  - id: owner_id
+    type: std::string
+    restore_value: yes
+    initial_value: ""
+    max_restore_data_length: 64
+
+
+substitutions:
+  hw_version: "rev_1.0"
+  fw_version: "1.0"
+  FACTORY_DEVICE_SERIAL: "MI-6226-A1-002-00003-4"
+  FACTORY_PROV_SECRET: "ceb68a7fa60eaecb9e23212f3782d7ae12ae91210e956c0b08adbdf8373cad7d"
+  
+
+mqtt:
+  id: my_mqtt
+  enable_on_boot: False
+  broker: mqtt.techsavvylab.com
+  port: 8883
+  keepalive: 30s
+  #insecure: false
+  client_id: "placeholder"
+  username: "placeholder"
+  password: "placeholder"
+  reboot_timeout: 5min
+  skip_cert_cn_check: false
+  discover_ip: false
+  discovery: false
+  clean_session: false
+  certificate_authority: |
+    -----BEGIN CERTIFICATE-----
+    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
+    -----END CERTIFICATE-----
+ 
+  on_connect:
+    then:
+      - lambda: |-
+          if (id(owner_id).empty() || id(device_id).empty()) {
+            ESP_LOGW("MQTT", "Owner or Device ID empty. Skipping OTA subscription.");
+            return;
+          }
+  
+          std::string OTA_topic = "cmd/" + id(owner_id) + "/" + id(device_id) + "/ota";
+  
+          id(my_mqtt).subscribe(OTA_topic, [](const std::string &topic, const std::string &payload) {
+            ESP_LOGI("MQTT", "Message on %s: %s", topic.c_str(), payload.c_str());
+  
+            if (payload == "ota_true") {
+              id(http_ota).execute();
+            }
+          });
+  
+          ESP_LOGI("MQTT", "Subscribed to %s", OTA_topic.c_str());
+
+script:
+  - id: provision_device
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: 'return id(mqtt_token).empty() && !id(device_serial).empty() && !id(prov_secret).empty();'
+          then:
+            - logger.log: "Running Provisionong script"
+            - http_request.post:
+                url: http://192.168.0.104:8086/api/devices/provision
+                request_headers:
+                  Content-Type: application/json
+                body: !lambda |-
+                  return std::string("{\"serial_number\":\"") + id(device_serial) +
+                         "\",\"prov_secret\":\"" + id(prov_secret) + "\"}";
+                capture_response: true
+                on_response:
+                  then:
+                    - if:
+                        condition:
+                          lambda: return response->status_code == 200;
+                        then:
+                          - lambda: |-
+                              bool ok = false;
+                              std::string owner, did, token;
+
+                              json::parse_json(body, [&](JsonObject root) -> bool {
+                                ok    = (bool)(root["success"] | false);
+                                owner = (const char*)(root["owner_id"]    | "");
+                                did   = (const char*)(root["device_id"]   | "");
+                                token = (const char*)(root["device_token"]| "");
+                                return true;
+                              });
+
+                              if (!ok || owner.empty() || did.empty() || token.empty()) {
+                                ESP_LOGW("PROVISION", "Bad response: %s", body.c_str());
+                                return;
+                              }
+
+                              id(owner_id)  = owner;
+                              id(device_id) = did;
+                              id(mqtt_token)= token;
+
+                              global_preferences->sync();
+
+                              ESP_LOGI("PROVISION", "Owner ID: %s", id(owner_id).c_str());
+                              ESP_LOGI("PROVISION", "Device ID: %s", id(device_id).c_str());
+                              ESP_LOGI("PROVISION", "mqtt token: %s", id(mqtt_token).c_str());
+
+                              // Apply creds to ESPHome MQTT client
+                              esphome::mqtt::global_mqtt_client->set_client_id(id(device_serial));
+                              esphome::mqtt::global_mqtt_client->set_username(id(device_id));
+                              esphome::mqtt::global_mqtt_client->set_password(id(mqtt_token));
+                              
+                              ESP_LOGI("PROVISION", "Starting Mqtt..");
+
+                              // Start MQTT now
+                              esphome::mqtt::global_mqtt_client->enable();
+
+                        else:
+                          - lambda: |-
+                              ESP_LOGW("PROVISION", "HTTP %d: %s", response->status_code, body.c_str());
+      
+
+
+  - id: enable_mqtt_from_global
+    then: 
+      - if:
+          condition:
+            lambda: 'return !id(device_id).empty() && !id(mqtt_token).empty() && !id(device_serial).empty();'
+          then:
+            - lambda: |-
+                 // Apply creds to ESPHome MQTT client
+                 esphome::mqtt::global_mqtt_client->set_client_id(id(device_serial));
+                 esphome::mqtt::global_mqtt_client->set_username(id(device_id));
+                 esphome::mqtt::global_mqtt_client->set_password(id(mqtt_token));
+                 // Start MQTT now
+                 esphome::mqtt::global_mqtt_client->enable();
+
+          else:
+            - lambda: |-
+                ESP_LOGW("MQTT", "Globals not ready. serial=%d device_id=%d token=%d",
+                         !id(device_serial).empty(),
+                         !id(device_id).empty(),
+                         !id(mqtt_token).empty());
+
+  - id: http_ota
+    then: 
+      - ota.http_request.flash:
+          md5_url: https://pub-c7b3a70fb2ff4468bbcc864c8033a974.r2.dev/firmware/iot_test.md5
+          url: https://pub-c7b3a70fb2ff4468bbcc864c8033a974.r2.dev/firmware/iot_test.bin
+          
+          
